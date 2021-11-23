@@ -1,7 +1,7 @@
 package lavagem;
 
 public enum EstadoRolos {
-    ATIVO, PARADO
+    ATIVO, PARADO;
 
     /**
      * Converte a enumeração para uma String formatada

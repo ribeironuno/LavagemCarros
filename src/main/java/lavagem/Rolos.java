@@ -15,6 +15,7 @@ public class Rolos {
     /**
      * Instancia os rolos com a duração enviada por parametero lida
      * atraves do ficheiro de configuração
+     *
      * @param duracao duração em segundos da duração dos rolos
      */
     public Rolos(int duracao) {
@@ -24,6 +25,14 @@ public class Rolos {
 
     public void setEstado(EstadoRolos estado) {
         this.estado = estado;
+    }
+
+    public EstadoRolos getEstado() {
+        return this.estado;
+    }
+
+    public int getDuracao() {
+        return this.duracao;
     }
 
 }

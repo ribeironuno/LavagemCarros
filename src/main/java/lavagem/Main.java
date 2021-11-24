@@ -115,7 +115,7 @@ public class Main {
                     if (semaphoreTapete.availablePermits() == 1) { //Verifica se o tapete já está a correr
                         semaphoreTapete.acquire();
                         System.out.println("Lavagem: Tapete arrancou");
-                        aspersoresSecadores.darOrdem(AspersoresSecadores.PedidoMain.ASPIRAR); //Inicia o aspersor
+                        aspersoresSecadores.iniciarAspersor();
                         estadoLavagem = EstadoLavagem.ASPERSORES_EM_PROCESSO;
                     }
 
@@ -130,7 +130,7 @@ public class Main {
                 } else if (estadoLavagem == EstadoLavagem.ROLOS_EM_PROCESSO) {
                     if (semaphoreRolos.availablePermits() == 1) { //Entra quando os rolos acabarem
                         System.out.println("Lavagem: Rolos acabaram");
-                        aspersoresSecadores.darOrdem(AspersoresSecadores.PedidoMain.SECAR);
+                        aspersoresSecadores.iniciarSecador(randomNumber(3, 6));
                         estadoLavagem = EstadoLavagem.SECADOR_EM_PROCESSO;
                         semaphoreRolos.acquire();
                     }

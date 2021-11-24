@@ -60,6 +60,11 @@ public class Tapete implements Runnable {
             if (this.pedidoMain != null) {
                 switch (this.pedidoMain) {
                     case PARAR:
+                        try {
+                            Thread.sleep(DELAY_INICIO * 1000);
+                        } catch (InterruptedException ignored) {
+                        }
+                        this.estado = EstadoTapete.PARADO;
                         break;
                     case LIGAR_TRAS:
                         break;
@@ -69,11 +74,7 @@ public class Tapete implements Runnable {
                         } catch (InterruptedException e) {
                             return;
                         }
-                        System.out.println("Tapete iniciou");
                         this.estado = EstadoTapete.MOV_FRENTE;
-                        while (pedidoMain != PedidoMain.PARAR){
-
-                        }
                         sem.release();
                         this.pedidoMain = null;
                         break;

@@ -74,13 +74,19 @@ public class Main {
         threadAspersoresSecadores.start();
 
         Thread gui = new Thread(new Interface(semaphoreInterface, buffer));
+        Semaphore semaphoreInterfaceMoedeiro = new Semaphore(0);
+        Thread guiMoedeiro = new Thread(new Moedeiro(semaphoreInterfaceMoedeiro, buffer));
         gui.start();
+        guiMoedeiro.start();
 
         int carrosTotais = 0;
         int carrosLavados = 0;
+        double introduzido = 0;
         GUI();
 
         while (true) {
+            Moedeiro.labelB.setText("<html><body>Introduzido - " + String.format("%.1f", introduzido) + "€ <br></body></html>");
+
             labelLavados.setText("<html><p style=\"text-align:center;\">Lavagens = " + carrosLavados + "</p><br></html>");
             labelTotal.setText("<html><p style=\"text-align:center;\">Carros que passaram aqui = " + carrosTotais + "</p><br></html>");
             labelFila.setText("<html><p style=\"text-align:center;\">Carros na fila = " + filaCarros.size() + "</p><br></html>");
@@ -149,6 +155,37 @@ public class Main {
                     estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;
                     semaphoreLavagem.acquire();
                     System.out.println("Fila de espera: " + filaCarros);
+                }
+            } else if (semaphoreInterfaceMoedeiro.availablePermits() == 1) {
+                Moedeiro.labelT.setText(" ");
+                semaphoreInterfaceMoedeiro.acquire();
+                if (buffer.getBotao().equals("0.10€")) {
+                    System.out.println("Inseridos 0.10€");
+                    introduzido += 0.10;
+                } else if (buffer.getBotao().equals("0.20€")) {
+                    System.out.println("Inseridos 0.20€");
+                    introduzido += 0.20;
+                } else if (buffer.getBotao().equals("0.50€")) {
+                    System.out.println("Inseridos 0.50€");
+                    introduzido += 0.50;
+                } else if (buffer.getBotao().equals("1€")) {
+                    System.out.println("Inseridos 1.00€");
+                    introduzido += 1;
+                } else if (buffer.getBotao().equals("2€")) {
+                    System.out.println("Inseridos 2.00€");
+                    introduzido += 2;
+                } else if (buffer.getBotao().equals("I")) {
+                    if (introduzido < 3.00) {
+                        System.out.println("Valor introduzido inferior ao valor da lavagem");
+                    } else {
+                        filaCarros.enqueue(new Carro("Carro" + carrosTotais++));
+                        System.out.println("A iniciar lavagem");
+                        semaphoreLavagem.release();
+                        if (introduzido > 3.00) {
+                            Moedeiro.labelT.setText("<html><body>Troco " + String.format(" %.1f", 3.00 - introduzido) + "€ <br></body></html>");
+                        }
+                        introduzido = 0;
+                    }
                 }
             }
         }

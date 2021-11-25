@@ -3,9 +3,16 @@ package lavagem;
 import collections.implementation.LinkedQueue;
 import collections.interfaces.QueueADT;
 import enumerations.EstadoLavagem;
+import enumerations.EstadoSistema;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 
@@ -17,18 +24,46 @@ public class Main {
     static JLabel labelStatusTapete;
     static JLabel labelStatusRolos;
     static JLabel labelStatusAspersorSecador;
+    static JLabel labelEstadoSistema;
+
+    static int tempoInicialTapete;
+    static int tempoFinalTapete;
+    static int tempoMinRolos;
+    static int tempoMaxRolos;
+    static int tempoAspersores;
+    static int tempoSecadorMin;
+    static int tempoSecadorMax;
+
+    public static void lerDados(String caminho) throws IOException, ParseException {
+        JSONParser parser = new JSONParser();
+        FileReader reader = null;
+        reader = new FileReader("files/dados.json");
+
+        JSONObject obj = (JSONObject) parser.parse(reader);
+
+        tempoInicialTapete = ((Long) obj.get("tempoInicialTapete")).intValue();
+        tempoFinalTapete = ((Long) obj.get("tempoFinalTapete")).intValue();
+        tempoMinRolos = ((Long) obj.get("tempoMinRolos")).intValue();
+        tempoMaxRolos = ((Long) obj.get("tempoMaxRolos")).intValue();
+        tempoAspersores = ((Long) obj.get("tempoAspersores")).intValue();
+        tempoSecadorMin = ((Long) obj.get("tempoSecadorMin")).intValue();
+        tempoSecadorMax = ((Long) obj.get("tempoSecadorMax")).intValue();
+    }
+
 
     public static void GUI() {
         JFrame janela = new JFrame("Main");
         janela.getContentPane().setLayout(new FlowLayout());
 
         labelTotal = new JLabel();
+        labelEstadoSistema = new JLabel();
         labelLavados = new JLabel();
         labelFila = new JLabel();
         labelStatusTapete = new JLabel();
         labelStatusRolos = new JLabel();
         labelStatusAspersorSecador = new JLabel();
 
+        janela.add(labelEstadoSistema);
         janela.add(labelTotal);
         janela.add(labelLavados);
         janela.add(labelFila);
@@ -50,7 +85,24 @@ public class Main {
     }
 
     public static void main(String[] args) throws InterruptedException {
+
+        try {
+            lerDados("files/Dados.json");
+        } catch (IOException | ParseException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println(tempoInicialTapete);
+        System.out.println(tempoFinalTapete);
+        System.out.println(tempoMinRolos);
+        System.out.println(tempoMaxRolos);
+        System.out.println(tempoAspersores);
+        System.out.println(tempoSecadorMin);
+        System.out.println(tempoSecadorMax);
+
         QueueADT<Carro> filaCarros = new LinkedQueue<>();
+
+        EstadoSistema estadoSistema = EstadoSistema.LIVRE;
 
         Semaphore semaphoreTapete = new Semaphore(0);
         Tapete tapete = new Tapete(semaphoreTapete);
@@ -78,9 +130,12 @@ public class Main {
 
         int carrosTotais = 0;
         int carrosLavados = 0;
+        boolean sistemaEstaSuspenso = false;
         GUI();
 
         while (true) {
+            //Atualiza valores gerais
+            labelEstadoSistema.setText("<html><p style=\"text-align:center;\">Estado Sistema = " + estadoSistema + "</p><br></html>");
             labelLavados.setText("<html><p style=\"text-align:center;\">Lavagens = " + carrosLavados + "</p><br></html>");
             labelTotal.setText("<html><p style=\"text-align:center;\">Carros que passaram aqui = " + carrosTotais + "</p><br></html>");
             labelFila.setText("<html><p style=\"text-align:center;\">Carros na fila = " + filaCarros.size() + "</p><br></html>");
@@ -96,18 +151,32 @@ public class Main {
                     System.out.println("Interface: Chegou 1 carro! Fila atual: " + filaCarros);
 
                 } else if (buffer.getBotao().equals("Iniciar Lavagem")) {
-                    if (semaphoreLavagem.availablePermits() == 1) {//Se a lavagem tem 1 recurso disponivel, não pode iniciar
-                        System.out.println("Interface: Acesso negado ao carro '" + filaCarros.first().getNome() + "' Já se encontra uma lavagem em curso");
+                    if (filaCarros.size() == 0) {
+                        System.out.println("Não há carros na fila!");
                     } else {
-                        semaphoreLavagem.release(); //Senao abre permissao para a lavagem acontecer
-                        System.out.println(filaCarros.first().getNome() + "Interface:  Iniciou lavagem");
+                        if (semaphoreLavagem.availablePermits() == 1) {//Se a lavagem tem 1 recurso disponivel, não pode iniciar
+                            System.out.println("Interface: Acesso negado ao carro '" + filaCarros.first().getNome() + "' Já se encontra uma lavagem em curso");
+                        } else {
+                            semaphoreLavagem.release(); //Senao abre permissao para a lavagem acontecer
+                            System.out.println(filaCarros.first().getNome() + "Interface:  Iniciou lavagem");
+                        }
                     }
                 } else if (buffer.getBotao().equals("Botao emergencia")) {
-
+                    if (sistemaEstaSuspenso) {
+                        System.out.println("Interface: Botao de emergencia desativado");
+                        rolos.retomarRolos();
+                        sistemaEstaSuspenso = false;
+                    } else {
+                        System.out.println("Interface: Botao de emergencia ativado");
+                        threadRolos.interrupt();
+                        rolos.suspenderRolos();
+                        sistemaEstaSuspenso = true;
+                    }
                 }
 
             } else if (semaphoreLavagem.availablePermits() == 1) { //Entra se a lavagem iniciou ou há permissao para tal
                 if (estadoLavagem == EstadoLavagem.AINDA_NAO_INICIOU) {
+                    estadoSistema = EstadoSistema.OCUPADO;
                     tapete.darOrdem(Tapete.PedidoMain.LIGAR_FRENTE); //Ordem para tapete inciar
                     estadoLavagem = EstadoLavagem.ESPERA_POR_TAPETE;
 
@@ -145,6 +214,7 @@ public class Main {
                 } else if (estadoLavagem == EstadoLavagem.FINALIZADA) {
                     tapete.darOrdem(Tapete.PedidoMain.PARAR);
                     System.out.println(filaCarros.dequeue().getNome() + " acabou a lavagem");
+                    estadoSistema = EstadoSistema.LIVRE;
                     carrosLavados++;
                     estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;
                     semaphoreLavagem.acquire();

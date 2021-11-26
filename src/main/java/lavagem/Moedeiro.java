@@ -1,5 +1,7 @@
 package lavagem;
 
+import sharedobjects.SharedMainInterface;
+
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
@@ -7,45 +9,56 @@ import java.util.concurrent.Semaphore;
 
 public class Moedeiro implements ActionListener, Runnable {
     JFrame janela;
-    Semaphore semMT;
-    Buffer buffer;
-    static JLabel labelB = new JLabel("<html><body>Introduzido - 0.00€ <br></body></html>");
-    static JLabel labelT = new JLabel(" ");
 
-    public Moedeiro(Semaphore semMT, Buffer buffer) {
-        this.semMT = semMT;
-        this.buffer = buffer;
+    private Semaphore semDarOrdem; //Semaforo que irá dar ordem ao main e aguadar pelo processamento do mesmo
+    private Semaphore semReceberOrdem; //Semaforo que
+    private SharedMainInterface sharedObj;
+
+    private JLabel labelB = new JLabel("<html><body>Introduzido - 0.00 Euros <br></body></html>");
+    private JLabel labelT = new JLabel(" ");
+    private JLabel labelEstado = new JLabel("<html><body>Notificacao: Estado Ativo <br></body></html>");
+
+    private JButton imageButton1;
+    private JButton imageButton2;
+    private JButton imageButton3;
+    private JButton imageButton4;
+    private JButton imageButton5;
+
+    public Moedeiro(Semaphore semDarOdem, Semaphore semReceberOrdem, SharedMainInterface buffer) {
+        this.semDarOrdem = semDarOdem;
+        this.sharedObj = buffer;
+        this.semReceberOrdem = semReceberOrdem;
     }
 
     public void mostraJanela() {
-        janela = new JFrame("Nova janela");
+        janela = new JFrame("Moedeiro");
 
-        // define layout para janela
         janela.getContentPane().setLayout(new FlowLayout());
 
-        JLabel labelA = new JLabel("<html><body>Lavagem - 3.00€ <br></body></html>");
-        //JLabel labelB = new JLabel();
+        JLabel labelA = new JLabel("<html><body>Lavagem " + String.format("%.1f", sharedObj.getValorLavagem()) + " Euros <br></body></html>");
+
         ImageIcon image = new ImageIcon("10.jpeg");
         ImageIcon image2 = new ImageIcon("20.jpeg");
         ImageIcon image3 = new ImageIcon("50.jpeg");
         ImageIcon image4 = new ImageIcon("1.jpeg");
         ImageIcon image5 = new ImageIcon("2.jpeg");
 
-        JButton botaoA = new JButton("I");
+        JButton botaoI = new JButton("I");
         JButton botaoC = new JButton("C");
-        JButton botaoD = new JButton("E");
-        JButton botaoE = new JButton("R");
-        JButton botaoF = new JButton("A/F");
+        JButton botaoE = new JButton("E");
+        JButton botaoR = new JButton("R");
+        JButton botaoAF = new JButton("A/F");
+        JButton addCarro = new JButton("Adicionar carro");
 
-        JButton imageButton1 = new JButton("0.10€");
+        this.imageButton1 = new JButton("0.10");
         imageButton1.setIcon(image);
-        JButton imageButton2 = new JButton("0.20€");
+        this.imageButton2 = new JButton("0.20");
         imageButton2.setIcon(image2);
-        JButton imageButton3 = new JButton("0.50€");
+        this.imageButton3 = new JButton("0.50");
         imageButton3.setIcon(image3);
-        JButton imageButton4 = new JButton("1€");
+        this.imageButton4 = new JButton("1");
         imageButton4.setIcon(image4);
-        JButton imageButton5 = new JButton("2€");
+        this.imageButton5 = new JButton("2");
         imageButton5.setIcon(image5);
 
         // define listeners para botões
@@ -55,32 +68,34 @@ public class Moedeiro implements ActionListener, Runnable {
         imageButton4.addActionListener(this);
         imageButton5.addActionListener(this);
 
-        botaoA.addActionListener(this);
+        botaoI.addActionListener(this);
         botaoC.addActionListener(this);
-        botaoD.addActionListener(this);
-        botaoE.addActionListener(this);
-        botaoF.addActionListener(this);
+        botaoR.addActionListener(this);
+        botaoR.addActionListener(this);
+        botaoAF.addActionListener(this);
+        addCarro.addActionListener(this);
 
         // adiciona botões à janela
-
-
         janela.add(labelA);
         janela.add(labelB);
         janela.add(labelT);
+        janela.add(labelEstado);
         janela.add(imageButton1);
         janela.add(imageButton2);
         janela.add(imageButton3);
         janela.add(imageButton4);
         janela.add(imageButton5);
 
-        janela.add(botaoA);
+        janela.add(botaoI);
         janela.add(botaoC);
-        janela.add(botaoD);
-        janela.add(botaoE);
-        janela.add(botaoF);
+        janela.add(botaoR);
+        janela.add(botaoR);
+        janela.add(botaoAF);
+        janela.add(addCarro);
 
         janela.pack();
-        janela.setSize(150, 600);
+        janela.setSize(300, 280);
+        janela.setLocation(400, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
@@ -90,42 +105,87 @@ public class Moedeiro implements ActionListener, Runnable {
         String action = ae.getActionCommand();
 
         // este código pode ser melhorado
-        if (action.equals("0.10€")) {
-            buffer.setBotao("0.10€");
-            semMT.release();
-        } else if (action.equals("0.20€")) {
-            buffer.setBotao("0.20€");
-            semMT.release();
-        } else if (action.equals("0.50€")) {
-            buffer.setBotao("0.50€");
-            semMT.release();
-        } else if (action.equals("1€")) {
-            buffer.setBotao("1€");
-            semMT.release();
-        } else if (action.equals("2€")) {
-            buffer.setBotao("2€");
-            semMT.release();
+        if (action.equals("0.10")) {
+            sharedObj.setValorIntroduzido(0.10);
+            labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
+        } else if (action.equals("0.20")) {
+            sharedObj.setValorIntroduzido(0.20);
+            labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
+        } else if (action.equals("0.50")) {
+            sharedObj.setValorIntroduzido(0.50);
+            labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
+        } else if (action.equals("1")) {
+            sharedObj.setValorIntroduzido(1);
+            labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
+        } else if (action.equals("2")) {
+            sharedObj.setValorIntroduzido(2);
+            labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
         } else if (action.equals("I")) {
-            buffer.setBotao("I");
-            semMT.release();
+            this.desativarBotoes();
+            sharedObj.setBotao("I");
+            semDarOrdem.release();
         } else if (action.equals("C")) {
-            buffer.setBotao("C");
-            semMT.release();
+            sharedObj.setBotao("C");
+            semDarOrdem.release();
         } else if (action.equals("E")) {
-            buffer.setBotao("E");
-            semMT.release();
+            sharedObj.setBotao("E");
+            semDarOrdem.release();
         } else if (action.equals("R")) {
-            buffer.setBotao("R");
-            semMT.release();
+            sharedObj.setBotao("R");
+            semDarOrdem.release();
         } else if (action.equals("A/F")) {
-            buffer.setBotao("A/F");
-            semMT.release();
+            sharedObj.setBotao("A/F");
+            semDarOrdem.release();
+        } else if (action.equals("Adicionar carro")) {
+            sharedObj.setBotao("Adicionar carro");
+            semDarOrdem.release();
         }
+    }
+
+    public void desativarBotoes() {
+        this.imageButton1.setEnabled(false);
+        this.imageButton2.setEnabled(false);
+        this.imageButton3.setEnabled(false);
+        this.imageButton4.setEnabled(false);
+        this.imageButton5.setEnabled(false);
+    }
+
+    public void ativarButoes() {
+        this.imageButton1.setEnabled(true);
+        this.imageButton2.setEnabled(true);
+        this.imageButton3.setEnabled(true);
+        this.imageButton4.setEnabled(true);
+        this.imageButton5.setEnabled(true);
     }
 
     @Override
     public void run() {
         mostraJanela();
+        while (true) {
+
+            try {
+                semReceberOrdem.acquire(); //Espera pela ordem do main
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            switch (sharedObj.getNotificacao()) {
+                case VALOR_INSUFICIENTE:
+                    labelEstado.setText("<html><body>Notificacao: Valor insuficiente <br></body></html>");
+                    break;
+                case LAVAGEM_ACEITE_COM_TROCO:
+                    labelEstado.setText("<html><body>Notificacao: Lavagem aceite com troco: " + String.format("%.1f", sharedObj.getTroco()) + " Euros<br></body></html>");
+                    sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
+                    break;
+
+                case LAVAGEM_ACEITE_SEM_TROCO:
+                    labelEstado.setText("<html><body>Notificacao: Lavagem aceite sem troco <br></body></html>");
+                    sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
+                    break;
+            }
+            this.ativarButoes();
+        }
     }
 }
+
 

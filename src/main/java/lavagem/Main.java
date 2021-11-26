@@ -51,6 +51,11 @@ public class Main {
     private static Rolos rolos;
     private static AspersoresSecadores aspersoresSecadores;
     private static Thread treadTrataMoedeiro; //Thread que irá tratar do processo de pagamento
+    private static Semaphore semMoedeiroRecebeOrdem;
+    private static SharedMainInterface sharedMainInterface;
+    private static Semaphore semMoedeiroDarOrdem;
+    private static Semaphore semaphoreLavagem;
+
 
     private static void lerDados(String caminho) throws IOException, ParseException {
         JSONParser parser = new JSONParser();
@@ -86,8 +91,8 @@ public class Main {
         janela.add(labelFila);
 
         janela.pack();
-        janela.setSize(260, 280);
-        janela.setLocation(1000, 400);
+        janela.setSize(260, 320);
+        janela.setLocation(1040, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
@@ -111,6 +116,41 @@ public class Main {
 
         @Override
         public void run() {
+            while (true) {
+                if ( semMoedeiroRecebeOrdem.availablePermits() == 1) {
+                    try {
+                        semMoedeiroRecebeOrdem.acquire();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    switch (sharedMainInterface.getBotao()) {
+                        case "Adicionar carro":
+                            filaLavagem.enqueue(new Carro("Carro" + carrosTotais++));
+                            System.out.println("Interface: Chegou 1 carro! Fila atual: " + filaLavagem);
+                            break;
+                        case "I":
+                            double valorIntroduzido = sharedMainInterface.getValorIntroduzido(); //Vai buscar o valor ao shared object
+                            if (valorIntroduzido < valorLavagem) {
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.VALOR_INSUFICIENTE); //Notifica o moedeiro que é insuficiente
+                                semMoedeiroDarOrdem.release();
+                            } else {
+                                filaLavagem.enqueue(new Carro("Carro" + carrosTotais++)); //Adiciona o carro
+                                semaphoreLavagem.release();
+                                if (valorIntroduzido > valorLavagem) {
+                                    sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_COM_TROCO); //Notifica que o carro irá iniciar a lavagem e receber troco
+                                    sharedMainInterface.setTroco(valorIntroduzido - valorLavagem);
+                                    semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
+                                } else {
+                                    sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_SEM_TROCO);
+                                    semMoedeiroDarOrdem.release();
+                                    semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
+                                }
+                            }
+                            break;
+                    }
+                }
+
+            }
         }
     }
 
@@ -120,8 +160,7 @@ public class Main {
         } catch (IOException | ParseException e) {
             e.printStackTrace();
         }
-        Thread threadM = new ThreadTrataMoedeiro();
-        threadM.start();
+
 
         filaParaPagar = new LinkedQueue<>();
         filaLavagem = new LinkedQueue<>();
@@ -139,7 +178,7 @@ public class Main {
         Thread threadTapete = new Thread(tapete, "Th[TAPETE]");
         threadTapete.start();
 
-        Semaphore semaphoreLavagem = new Semaphore(0);
+        semaphoreLavagem = new Semaphore(0);
         EstadoLavagem estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;
 
         Semaphore semaphoreRolos = new Semaphore(0);
@@ -156,12 +195,15 @@ public class Main {
         Thread threadAspersoresSecadores = new Thread(aspersoresSecadores, "TH[ASPERSORES]");
         threadAspersoresSecadores.start();
 
-        Semaphore semMoedeiroRecebeOrdem = new Semaphore(0);
-        Semaphore semMoedeiroDarOrdem = new Semaphore(0);
-        SharedMainInterface sharedMainInterface = new SharedMainInterface();
+        semMoedeiroRecebeOrdem = new Semaphore(0);
+        semMoedeiroDarOrdem = new Semaphore(0);
+        sharedMainInterface = new SharedMainInterface();
         sharedMainInterface.setValorLavagem(valorLavagem);
         Thread guiMoedeiro = new Thread(new Moedeiro(semMoedeiroRecebeOrdem, semMoedeiroDarOrdem, sharedMainInterface));
         guiMoedeiro.start();
+
+        Thread threadM = new ThreadTrataMoedeiro();
+        threadM.start();
 
         mostrarJanela();
 
@@ -171,35 +213,7 @@ public class Main {
             labelTotal.setText("<html><p style=\"text-align:center;\">Carros que passaram aqui = " + carrosTotais + "</p><br></html>");
             labelFila.setText("<html><p style=\"text-align:center;\">Carros na fila = " + filaLavagem.size() + "</p><br></html>");
 
-            if (semMoedeiroRecebeOrdem.availablePermits() == 1) { //Entra caso a interface tenha feito pedido
-                semMoedeiroRecebeOrdem.acquire();
-                switch (sharedMainInterface.getBotao()) {
-                    case "Adicionar carro":
-                        filaLavagem.enqueue(new Carro("Carro" + carrosTotais++));
-                        System.out.println("Interface: Chegou 1 carro! Fila atual: " + filaLavagem);
-                        break;
-                    case "I":
-                        double valorIntroduzido = sharedMainInterface.getValorIntroduzido(); //Vai buscar o valor ao shared object
-                        if (valorIntroduzido < valorLavagem) {
-                            sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.VALOR_INSUFICIENTE); //Notifica o moedeiro que é insuficiente
-                            semMoedeiroDarOrdem.release();
-                        } else {
-                            filaLavagem.enqueue(new Carro("Carro" + carrosTotais++)); //Adiciona o carro
-                            semaphoreLavagem.release();
-                            if (valorIntroduzido > valorLavagem) {
-                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_COM_TROCO); //Notifica que o carro irá iniciar a lavagem e receber troco
-                                sharedMainInterface.setTroco(valorIntroduzido - valorLavagem);
-                                semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
-                            } else {
-                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_SEM_TROCO);
-                                semMoedeiroDarOrdem.release();
-                                semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
-                            }
-                        }
-                        break;
-                }
-
-            } else if (semaphoreLavagem.availablePermits() == 1) { //Entra se a lavagem iniciou ou há permissao para tal
+            if (semaphoreLavagem.availablePermits() == 1) { //Entra se a lavagem iniciou ou há permissao para tal
                 estadoSistema = EstadoSistema.OCUPADO;
                 atualizarLabels();
                 sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.LIGAR_FRENTE);

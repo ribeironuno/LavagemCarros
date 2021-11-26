@@ -59,8 +59,8 @@ public class Tapete implements Runnable {
         janela.add(labelEstado);
 
         janela.pack();
-        janela.setSize(300, 80);
-        janela.setLocation(700, 400);
+        janela.setSize(300, 95);
+        janela.setLocation(740, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }

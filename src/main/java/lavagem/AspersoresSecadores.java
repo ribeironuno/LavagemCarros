@@ -57,8 +57,8 @@ public class AspersoresSecadores implements Runnable {
         janela.add(labelEstado);
 
         janela.pack();
-        janela.setSize(300, 80);
-        janela.setLocation(700, 500);
+        janela.setSize(300, 95);
+        janela.setLocation(740, 510);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }

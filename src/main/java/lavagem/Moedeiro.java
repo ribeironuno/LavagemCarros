@@ -43,12 +43,27 @@ public class Moedeiro implements ActionListener, Runnable {
         ImageIcon image4 = new ImageIcon("images/1.jpeg");
         ImageIcon image5 = new ImageIcon("images/2.jpeg");
 
+        JPanel panelLabels = new JPanel();
+        JPanel panelLabels2 = new JPanel();
+        JPanel panelLabels3 = new JPanel();
+        JPanel panelMoedas = new JPanel();
+        JPanel panelMoedas2 = new JPanel();
+        JPanel panelButoes1 = new JPanel();
+        JPanel panelButoes2 = new JPanel();
+
         JButton botaoI = new JButton("I");
         JButton botaoC = new JButton("C");
         JButton botaoE = new JButton("E");
         JButton botaoR = new JButton("R");
         JButton botaoAF = new JButton("A/F");
         JButton addCarro = new JButton("Adicionar carro");
+
+        panelButoes1.add(botaoI);
+        panelButoes1.add(botaoC);
+        panelButoes1.add(botaoE);
+        panelButoes1.add(botaoR);
+        panelButoes2.add(botaoAF);
+        panelButoes2.add(addCarro);
 
         this.imageButton1 = new JButton("0.10");
         imageButton1.setIcon(image);
@@ -61,7 +76,23 @@ public class Moedeiro implements ActionListener, Runnable {
         this.imageButton5 = new JButton("2");
         imageButton5.setIcon(image5);
 
-        // define listeners para botões
+        panelMoedas.add(imageButton1);
+        panelMoedas.add(imageButton2);
+        panelMoedas2.add(imageButton3);
+        panelMoedas2.add(imageButton4);
+        panelMoedas2.add(imageButton5);
+        panelLabels.add(labelA);
+        panelLabels2.add(labelB);
+        panelLabels3.add(labelEstado);
+
+        janela.add(panelLabels);
+        janela.add(panelLabels2);
+        janela.add(panelLabels3);
+        janela.add(panelMoedas);
+        janela.add(panelMoedas2);
+        janela.add(panelButoes1);
+        janela.add(panelButoes2);
+
         imageButton1.addActionListener(this);
         imageButton2.addActionListener(this);
         imageButton3.addActionListener(this);
@@ -75,26 +106,8 @@ public class Moedeiro implements ActionListener, Runnable {
         botaoAF.addActionListener(this);
         addCarro.addActionListener(this);
 
-        // adiciona botões à janela
-        janela.add(labelA);
-        janela.add(labelB);
-        janela.add(labelT);
-        janela.add(labelEstado);
-        janela.add(imageButton1);
-        janela.add(imageButton2);
-        janela.add(imageButton3);
-        janela.add(imageButton4);
-        janela.add(imageButton5);
-
-        janela.add(botaoI);
-        janela.add(botaoC);
-        janela.add(botaoR);
-        janela.add(botaoR);
-        janela.add(botaoAF);
-        janela.add(addCarro);
-
         janela.pack();
-        janela.setSize(300, 280);
+        janela.setSize(340, 320);
         janela.setLocation(400, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -126,7 +139,8 @@ public class Moedeiro implements ActionListener, Runnable {
             semDarOrdem.release();
         } else if (action.equals("C")) {
             sharedObj.setBotao("C");
-            semDarOrdem.release();
+            sharedObj.resetValor();
+            labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
         } else if (action.equals("E")) {
             sharedObj.setBotao("E");
             semDarOrdem.release();

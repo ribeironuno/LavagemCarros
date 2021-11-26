@@ -53,8 +53,8 @@ public class Rolos implements Runnable {
         janela.add(labelEstado);
 
         janela.pack();
-        janela.setSize(300, 80);
-        janela.setLocation(700, 600);
+        janela.setSize(300, 95);
+        janela.setLocation(740, 620);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }

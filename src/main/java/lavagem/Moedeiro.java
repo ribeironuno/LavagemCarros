@@ -37,11 +37,11 @@ public class Moedeiro implements ActionListener, Runnable {
 
         JLabel labelA = new JLabel("<html><body>Lavagem " + String.format("%.1f", sharedObj.getValorLavagem()) + " Euros <br></body></html>");
 
-        ImageIcon image = new ImageIcon("10.jpeg");
-        ImageIcon image2 = new ImageIcon("20.jpeg");
-        ImageIcon image3 = new ImageIcon("50.jpeg");
-        ImageIcon image4 = new ImageIcon("1.jpeg");
-        ImageIcon image5 = new ImageIcon("2.jpeg");
+        ImageIcon image = new ImageIcon("images/10.jpeg");
+        ImageIcon image2 = new ImageIcon("images/20.jpeg");
+        ImageIcon image3 = new ImageIcon("images/50.jpeg");
+        ImageIcon image4 = new ImageIcon("images/1.jpeg");
+        ImageIcon image5 = new ImageIcon("images/2.jpeg");
 
         JButton botaoI = new JButton("I");
         JButton botaoC = new JButton("C");

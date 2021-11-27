@@ -1,0 +1,4 @@
+27/11/2021 18:22:43 Carro0 iniciou lavagem
+27/11/2021 18:23:02 Carro0 terminou lavagem
+27/11/2021 18:24:29 Carro0 iniciou lavagem
+27/11/2021 18:24:48 Carro0 terminou lavagem

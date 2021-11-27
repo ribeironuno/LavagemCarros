@@ -42,7 +42,7 @@ public class Log implements Runnable {
     public Log(Semaphore sem, SharedMainLog sharedObj) throws IOException {
         this.sem = sem;
         this.sharedObj = sharedObj;
-        this.file = new File("log.txt");
+        this.file = new File("files/log.txt");
         this.fw = new FileWriter(this.file, true);
         this.pw = new PrintWriter(this.fw);
     }

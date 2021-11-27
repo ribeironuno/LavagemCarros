@@ -1,0 +1,10 @@
+{
+    "valorLavagem": 3.5,
+    "tempoInicialTapete": 2,
+    "tempoFinalTapete": 3,
+    "tempoMinRolos": 3,
+    "tempoMaxRolos": 5,
+    "tempoAspersores": 5,
+    "tempoSecadorMin": 3,
+    "tempoSecadorMax": 6
+}

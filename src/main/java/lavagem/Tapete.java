@@ -6,7 +6,12 @@ import sharedobjects.SharedMainTapete;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.concurrent.Semaphore;
+
+import static lavagem.Main.semaphoreLog;
+import static lavagem.Main.sharedMainLog;
 
 public class Tapete implements Runnable {
 
@@ -63,6 +68,12 @@ public class Tapete implements Runnable {
         janela.setLocation(740, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        janela.addWindowListener(new WindowAdapter(){
+            public void windowClosing(WindowEvent e){
+                semaphoreLog.release();
+                sharedMainLog.setMessage("close");
+            }
+        });
     }
 
     private void atualizarLabel() {

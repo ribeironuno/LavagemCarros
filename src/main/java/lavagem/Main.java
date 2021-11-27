@@ -7,13 +7,12 @@ import enumerations.EstadoSistema;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import sharedobjects.SharedMainAspersoresSecadores;
-import sharedobjects.SharedMainInterface;
-import sharedobjects.SharedMainRolos;
-import sharedobjects.SharedMainTapete;
+import sharedobjects.*;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Random;
@@ -55,6 +54,8 @@ public class Main {
     private static SharedMainInterface sharedMainInterface;
     private static Semaphore semMoedeiroDarOrdem;
     private static Semaphore semaphoreLavagem;
+    public static Semaphore semaphoreLog;
+    public static SharedMainLog sharedMainLog;
 
 
     private static void lerDados(String caminho) throws IOException, ParseException {
@@ -95,6 +96,12 @@ public class Main {
         janela.setLocation(1040, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        janela.addWindowListener(new WindowAdapter(){
+            public void windowClosing(WindowEvent e){
+                semaphoreLog.release();
+                sharedMainLog.setMessage("close");
+            }
+        });
     }
 
     public static void atualizarLabels() {
@@ -117,7 +124,7 @@ public class Main {
         @Override
         public void run() {
             while (true) {
-                if ( semMoedeiroRecebeOrdem.availablePermits() == 1) {
+                if (semMoedeiroRecebeOrdem.availablePermits() == 1) {
                     try {
                         semMoedeiroRecebeOrdem.acquire();
                     } catch (InterruptedException e) {
@@ -154,7 +161,7 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, IOException {
         try {
             lerDados("files/Dados.json");
         } catch (IOException | ParseException e) {
@@ -195,6 +202,12 @@ public class Main {
         Thread threadAspersoresSecadores = new Thread(aspersoresSecadores, "TH[ASPERSORES]");
         threadAspersoresSecadores.start();
 
+        semaphoreLog = new Semaphore(0);
+        sharedMainLog = new SharedMainLog();
+        Log log = new Log(semaphoreLog, sharedMainLog);
+        Thread threadLog = new Thread(log, "TH[LOG]");
+        threadLog.start();
+
         semMoedeiroRecebeOrdem = new Semaphore(0);
         semMoedeiroDarOrdem = new Semaphore(0);
         sharedMainInterface = new SharedMainInterface();
@@ -216,6 +229,12 @@ public class Main {
             if (semaphoreLavagem.availablePermits() == 1) { //Entra se a lavagem iniciou ou há permissao para tal
                 estadoSistema = EstadoSistema.OCUPADO;
                 atualizarLabels();
+
+                sharedMainLog.setMessage(filaLavagem.first().getNome() + " iniciou lavagem");
+                semaphoreLog.release();
+                Thread.sleep(200);
+                semaphoreLog.acquire();
+
                 sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.LIGAR_FRENTE);
                 estadoLavagem = EstadoLavagem.ESPERA_POR_TAPETE;
                 semaphoreTapete.release();
@@ -250,7 +269,12 @@ public class Main {
                 Thread.sleep(3000); //Espera 3 segundos antes de terminar tapete e finalizar lavagem
                 sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.PARAR);
                 semaphoreTapete.release();
-                System.out.println(filaLavagem.dequeue().getNome() + " acabou a lavagem");
+
+                sharedMainLog.setMessage(filaLavagem.dequeue().getNome() + " terminou lavagem");
+                semaphoreLog.release();
+                Thread.sleep(200);
+                semaphoreLog.acquire();
+
                 estadoSistema = EstadoSistema.LIVRE;
                 carrosLavados++;
                 estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;

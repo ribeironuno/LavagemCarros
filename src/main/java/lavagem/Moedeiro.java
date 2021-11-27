@@ -7,6 +7,9 @@ import java.awt.event.*;
 import javax.swing.*;
 import java.util.concurrent.Semaphore;
 
+import static lavagem.Main.semaphoreLog;
+import static lavagem.Main.sharedMainLog;
+
 public class Moedeiro implements ActionListener, Runnable {
     JFrame janela;
 
@@ -111,6 +114,12 @@ public class Moedeiro implements ActionListener, Runnable {
         janela.setLocation(400, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        janela.addWindowListener(new WindowAdapter(){
+            public void windowClosing(WindowEvent e){
+                semaphoreLog.release();
+                sharedMainLog.setMessage("close");
+            }
+        });
     }
 
     @Override

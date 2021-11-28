@@ -111,13 +111,13 @@ public class Tapete implements Runnable {
                     }
                     this.estado = EstadoTapete.MOV_FRENTE;
                     this.atualizarLabel();
-                    System.out.println("Tapete ligado");
+                    System.out.println(Thread.currentThread().getName() + ": Tapete ligado");
                     sem.release();
 
                     break;
                 case PARAR:
                     this.estado = EstadoTapete.PARADO;
-                    System.out.println("Tapete parou");
+                    System.out.println(Thread.currentThread().getName() + ": Tapete parou");
                     this.atualizarLabel();
                     break;
             }

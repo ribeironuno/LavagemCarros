@@ -68,8 +68,8 @@ public class Rolos implements Runnable {
         janela.setLocation(740, 620);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        janela.addWindowListener(new WindowAdapter(){
-            public void windowClosing(WindowEvent e){
+        janela.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
                 semaphoreLog.release();
                 sharedMainLog.setMessage("close");
             }
@@ -77,7 +77,7 @@ public class Rolos implements Runnable {
     }
 
     private void atualizarLabel() {
-        if (this.estado == EstadoRolos.PARADO){
+        if (this.estado == EstadoRolos.PARADO) {
             labelEstado.setForeground(Color.RED);
         } else {
             labelEstado.setForeground(Color.green);
@@ -98,7 +98,7 @@ public class Rolos implements Runnable {
             switch (sharedObj.getPedidoMain()) {
                 case LIGAR:
                     this.estado = EstadoRolos.ATIVO; //Ativa os rolos
-                    System.out.println("Rolos ativaram");
+                    System.out.println(Thread.currentThread().getName() + ": Rolos ativaram");
                     this.atualizarLabel();
                     long tempoInicio = System.currentTimeMillis(); //Regista a hora que iniciou caso seja interrompido saber o que falta de espera
                     try {
@@ -107,7 +107,7 @@ public class Rolos implements Runnable {
                         e.printStackTrace();
                     }
                     this.estado = EstadoRolos.PARADO; //Para rolos
-                    System.out.println("Rolos acabaram");
+                    System.out.println(Thread.currentThread().getName() + ": Rolos acabaram");
                     this.atualizarLabel();
                     sem.release(); //Notifica main
                     break;

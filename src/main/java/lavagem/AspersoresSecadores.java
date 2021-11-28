@@ -104,7 +104,7 @@ public class AspersoresSecadores implements Runnable {
             switch (sharedObj.getPedidoMain()) {
                 case ASPIRAR:
                     this.estado = EstadoAspersoresSecadores.EM_ASPIRACAO;
-                    System.out.println("Aspersores ligados");
+                    System.out.println(Thread.currentThread().getName() + ": Aspersores ligados");
                     this.atualizarLabel();
                     try {
                         Thread.sleep(sharedObj.getDuracaoAspersores() * 1000L);
@@ -112,21 +112,21 @@ public class AspersoresSecadores implements Runnable {
                         System.out.println(e);
                     }
                     this.estado = EstadoAspersoresSecadores.PARADO;
-                    System.out.println("Aspersores desligados");
+                    System.out.println(Thread.currentThread().getName() + ": Aspersores desligados");
                     this.atualizarLabel();
                     sem.release();
                     break;
 
                 case SECAR:
                     this.estado = EstadoAspersoresSecadores.EM_SECAGEM;
-                    System.out.println("Secadores ativados");
+                    System.out.println(Thread.currentThread().getName() + ": Secadores ativados");
                     this.atualizarLabel();
                     try {
                         Thread.sleep(sharedObj.getDuracaoSecadores() * 1000L);
                     } catch (InterruptedException e) {
                         System.out.println(e);
                     }
-                    System.out.println("Secadores terminaram");
+                    System.out.println(Thread.currentThread().getName() + ": Secadores terminaram");
                     this.estado = EstadoAspersoresSecadores.PARADO;
                     this.atualizarLabel();
                     sem.release();

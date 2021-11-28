@@ -4,7 +4,10 @@ import sharedobjects.SharedMainInterface;
 
 import java.awt.*;
 import java.awt.event.*;
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
 import static lavagem.Main.semaphoreLog;
@@ -26,6 +29,15 @@ public class Moedeiro implements ActionListener, Runnable {
     private JButton imageButton3;
     private JButton imageButton4;
     private JButton imageButton5;
+
+    private JButton botaoI;
+    private JButton botaoC;
+    private JButton botaoE;
+    private JButton botaoR;
+    private JButton botaoAF;
+    private JButton botaoAdd;
+    private JButton botaoAbrirLog;
+
 
     public Moedeiro(Semaphore semDarOdem, Semaphore semReceberOrdem, SharedMainInterface buffer) {
         this.semDarOrdem = semDarOdem;
@@ -54,19 +66,21 @@ public class Moedeiro implements ActionListener, Runnable {
         JPanel panelButoes1 = new JPanel();
         JPanel panelButoes2 = new JPanel();
 
-        JButton botaoI = new JButton("I");
-        JButton botaoC = new JButton("C");
-        JButton botaoE = new JButton("E");
-        JButton botaoR = new JButton("R");
-        JButton botaoAF = new JButton("A/F");
-        JButton addCarro = new JButton("Adicionar carro");
+        botaoI = new JButton("I");
+        botaoC = new JButton("C");
+        botaoE = new JButton("E");
+        botaoR = new JButton("R");
+        botaoAF = new JButton("A/F");
+        botaoAdd = new JButton("Adicionar carro");
+        botaoAbrirLog = new JButton("Ver logs");
 
         panelButoes1.add(botaoI);
         panelButoes1.add(botaoC);
         panelButoes1.add(botaoE);
         panelButoes1.add(botaoR);
         panelButoes2.add(botaoAF);
-        panelButoes2.add(addCarro);
+        panelButoes2.add(botaoAdd);
+        panelButoes2.add(botaoAbrirLog);
 
         this.imageButton1 = new JButton("0.10");
         imageButton1.setIcon(image);
@@ -107,15 +121,20 @@ public class Moedeiro implements ActionListener, Runnable {
         botaoR.addActionListener(this);
         botaoR.addActionListener(this);
         botaoAF.addActionListener(this);
-        addCarro.addActionListener(this);
+        botaoAdd.addActionListener(this);
+        botaoAbrirLog.addActionListener(this);
 
+        try {
+            janela.setIconImage(ImageIO.read(new File("images/icon.jpg")));
+        } catch (IOException ignored) {
+        }
         janela.pack();
         janela.setSize(340, 320);
         janela.setLocation(400, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        janela.addWindowListener(new WindowAdapter(){
-            public void windowClosing(WindowEvent e){
+        janela.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
                 semaphoreLog.release();
                 sharedMainLog.setMessage("close");
             }
@@ -143,12 +162,11 @@ public class Moedeiro implements ActionListener, Runnable {
             sharedObj.setValorIntroduzido(2);
             labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
         } else if (action.equals("I")) {
-            this.desativarBotoes();
             sharedObj.setBotao("I");
             semDarOrdem.release();
         } else if (action.equals("C")) {
             sharedObj.setBotao("C");
-            sharedObj.resetValor();
+            semDarOrdem.release();
             labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
         } else if (action.equals("E")) {
             sharedObj.setBotao("E");
@@ -162,29 +180,51 @@ public class Moedeiro implements ActionListener, Runnable {
         } else if (action.equals("Adicionar carro")) {
             sharedObj.setBotao("Adicionar carro");
             semDarOrdem.release();
+        } else if (action.equals("Ver logs")) {
+            sharedObj.setBotao("Ver logs");
+            semDarOrdem.release();
         }
     }
 
+    /**
+     * Coloca botoes desativados
+     */
     public void desativarBotoes() {
         this.imageButton1.setEnabled(false);
         this.imageButton2.setEnabled(false);
         this.imageButton3.setEnabled(false);
         this.imageButton4.setEnabled(false);
         this.imageButton5.setEnabled(false);
+
+
+        this.botaoI.setEnabled(false);
+        this.botaoC.setEnabled(false);
+        this.botaoE.setEnabled(false);
+        this.botaoR.setEnabled(false);
     }
 
-    public void ativarButoes() {
+    public void ativarBotoes() {
         this.imageButton1.setEnabled(true);
         this.imageButton2.setEnabled(true);
         this.imageButton3.setEnabled(true);
         this.imageButton4.setEnabled(true);
         this.imageButton5.setEnabled(true);
+
+        this.botaoI.setEnabled(true);
+        this.botaoC.setEnabled(true);
+        this.botaoE.setEnabled(true);
+        this.botaoR.setEnabled(true);
     }
 
     @Override
     public void run() {
         mostraJanela();
+        desativarBotoes();
         while (true) {
+
+            if (sharedObj.getNotificacao() != SharedMainInterface.Notificacao.VALOR_INSUFICIENTE) {
+                labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
+            }
 
             try {
                 semReceberOrdem.acquire(); //Espera pela ordem do main
@@ -193,6 +233,13 @@ public class Moedeiro implements ActionListener, Runnable {
             }
 
             switch (sharedObj.getNotificacao()) {
+                case CHEGOU_PRIMEIRO_CARRO:
+                    ativarBotoes();
+                    break;
+                case SEM_CARROS:
+                    desativarBotoes();
+                    labelEstado.setText("<html><body>Notificacao: Sem carros <br></body></html>");
+                    break;
                 case VALOR_INSUFICIENTE:
                     labelEstado.setText("<html><body>Notificacao: Valor insuficiente <br></body></html>");
                     break;
@@ -200,13 +247,49 @@ public class Moedeiro implements ActionListener, Runnable {
                     labelEstado.setText("<html><body>Notificacao: Lavagem aceite com troco: " + String.format("%.1f", sharedObj.getTroco()) + " Euros<br></body></html>");
                     sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
                     break;
-
                 case LAVAGEM_ACEITE_SEM_TROCO:
                     labelEstado.setText("<html><body>Notificacao: Lavagem aceite sem troco <br></body></html>");
                     sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
                     break;
+                case RETIRADA_CARRO_COM_DEVOLUCAO:
+                    labelEstado.setText("<html><body>Notificacao: Cancelamento com devolucao: " + String.format("%.1f", sharedObj.getValorIntroduzido()) + " Euros<br></body></html>");
+                    sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
+                    break;
+                case RETIRADA_CARRO_SEM_DEVOLUCAO:
+                    labelEstado.setText("<html><body>Notificacao: Cancelamento sem devolucao <br></body></html>");
+                    sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
+                    break;
+                case FECHO_SEM_DEVOLUCAO:
+                    labelEstado.setText("<html><body>Notificacao: Fecho sem devolucao <br></body></html>");
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    desativarBotoes();
+                    botaoAdd.setEnabled(false);
+                    botaoAF.setEnabled(true);
+                    break;
+                case FECHO_COM_DEVOLUCAO:
+                    desativarBotoes();
+                    labelEstado.setText("<html><body>Notificacao: Fecho com devolucao: " + String.format("%.1f", sharedObj.getValorIntroduzido()) + " Euros<br></body></html>");
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    sharedObj.resetValor(); //Reseta o valor no shared object para o prox carro
+                    //No método desativarBotoes estes 2 botoes nao desativam
+                    botaoAdd.setEnabled(false);
+                    botaoAF.setEnabled(true);
+                    break;
+                case RETOMAR_SISTEMA:
+                    labelEstado.setText("<html><body>Notificacao: Sem carros <br></body></html>");
+                    //No método desativarBotoes estes 2 botoes nao ativam
+                    botaoAdd.setEnabled(true);
+                    botaoAF.setEnabled(true);
+                    break;
             }
-            this.ativarButoes();
         }
     }
 }

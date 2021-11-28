@@ -4,29 +4,31 @@ import collections.implementation.LinkedQueue;
 import collections.interfaces.QueueADT;
 import enumerations.EstadoLavagem;
 import enumerations.EstadoSistema;
+import org.apache.commons.lang3.SystemUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import sharedobjects.*;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.concurrent.Semaphore;
 
 public class Main {
 
     private static JLabel labelTotal;
     private static JLabel labelLavados;
-    private static JLabel labelFila;
+    private static JLabel labelFilaPagamento;
+    private static JLabel labelFilaLavagem;
     private static JLabel labelEstadoSistema;
 
-    private static JButton addCarro;
 
     private static double valorLavagem;
     private static int tempoInicialTapete;
@@ -44,12 +46,10 @@ public class Main {
 
     private static int carrosTotais;
     private static int carrosLavados;
-    private static boolean sistemaEstaSuspenso;
 
     private static Tapete tapete;
     private static Rolos rolos;
     private static AspersoresSecadores aspersoresSecadores;
-    private static Thread treadTrataMoedeiro; //Thread que irá tratar do processo de pagamento
     private static Semaphore semMoedeiroRecebeOrdem;
     private static SharedMainInterface sharedMainInterface;
     private static Semaphore semMoedeiroDarOrdem;
@@ -57,11 +57,10 @@ public class Main {
     public static Semaphore semaphoreLog;
     public static SharedMainLog sharedMainLog;
 
-
     private static void lerDados(String caminho) throws IOException, ParseException {
         JSONParser parser = new JSONParser();
         FileReader reader = null;
-        reader = new FileReader("files/dados.json");
+        reader = new FileReader(caminho);
 
         JSONObject obj = (JSONObject) parser.parse(reader);
 
@@ -81,23 +80,28 @@ public class Main {
 
         labelTotal = new JLabel();
         labelEstadoSistema = new JLabel();
+        labelEstadoSistema.setForeground(Color.green);
         labelLavados = new JLabel();
-        labelFila = new JLabel();
-
-        addCarro = new JButton("Adicionar carro");
+        labelFilaPagamento = new JLabel();
+        labelFilaLavagem = new JLabel();
 
         janela.add(labelEstadoSistema);
         janela.add(labelTotal);
         janela.add(labelLavados);
-        janela.add(labelFila);
+        janela.add(labelFilaPagamento);
+        janela.add(labelFilaLavagem);
 
+        try {
+            janela.setIconImage(ImageIO.read(new File("images/icon.jpg")));
+        } catch (IOException e) {
+        }
         janela.pack();
         janela.setSize(260, 320);
         janela.setLocation(1040, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        janela.addWindowListener(new WindowAdapter(){
-            public void windowClosing(WindowEvent e){
+        janela.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
                 semaphoreLog.release();
                 sharedMainLog.setMessage("close");
             }
@@ -105,12 +109,40 @@ public class Main {
     }
 
     public static void atualizarLabels() {
+        if (estadoSistema == EstadoSistema.OCUPADO) {
+            labelEstadoSistema.setForeground(Color.orange);
+        } else if (estadoSistema == EstadoSistema.FECHADO) {
+            labelEstadoSistema.setForeground(Color.red);
+        } else {
+            labelEstadoSistema.setForeground(Color.green);
+        }
         labelEstadoSistema.setText("<html><p style=\"text-align:center;\">Estado Sistema = " + estadoSistema + "</p><br></html>");
         labelLavados.setText("<html><p style=\"text-align:center;\">Lavagens = " + carrosLavados + "</p><br></html>");
         labelTotal.setText("<html><p style=\"text-align:center;\">Carros que passaram aqui = " + carrosTotais + "</p><br></html>");
-        labelFila.setText("<html><p style=\"text-align:center;\">Carros na fila = " + filaLavagem.size() + "</p><br></html>");
+        labelFilaPagamento.setText("<html><p style=\"text-align:center;\">Carros na fila de pagamento = " + filaParaPagar.size() + "</p><br></html>");
+        labelFilaLavagem.setText("<html><p style=\"text-align:center;\">Carros na fila de lavagem = " + filaLavagem.size() + "</p><br></html>");
     }
 
+    /**
+     * Thread que atualiza as labels da Main a cada 200 ms
+     */
+    private static class ThreadAtualizaLabels extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                atualizarLabels();
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    /**
+     * Calcula um numero random entre o min e o maximo
+     */
     private static int randomNumber(int min, int max) {
         Random rand = new Random();
         return rand.nextInt((max - min) + 1) + min;
@@ -120,7 +152,6 @@ public class Main {
      * Thread que irá tratar do processo da interface (moedeiro e teclado)
      */
     private static class ThreadTrataMoedeiro extends Thread {
-
         @Override
         public void run() {
             while (true) {
@@ -132,8 +163,12 @@ public class Main {
                     }
                     switch (sharedMainInterface.getBotao()) {
                         case "Adicionar carro":
-                            filaLavagem.enqueue(new Carro("Carro" + carrosTotais++));
-                            System.out.println("Interface: Chegou 1 carro! Fila atual: " + filaLavagem);
+                            filaParaPagar.enqueue(new Carro("Carro" + carrosTotais++));
+                            System.out.println("Interface: Chegou 1 carro! Fila atual: " + filaParaPagar);
+                            if (filaParaPagar.size() == 1) { //Caso seja o primeiro carro a chegar
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.CHEGOU_PRIMEIRO_CARRO); //Notifica o moedeiro que é insuficiente
+                                semMoedeiroDarOrdem.release();
+                            }
                             break;
                         case "I":
                             double valorIntroduzido = sharedMainInterface.getValorIntroduzido(); //Vai buscar o valor ao shared object
@@ -141,22 +176,79 @@ public class Main {
                                 sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.VALOR_INSUFICIENTE); //Notifica o moedeiro que é insuficiente
                                 semMoedeiroDarOrdem.release();
                             } else {
-                                filaLavagem.enqueue(new Carro("Carro" + carrosTotais++)); //Adiciona o carro
+                                filaLavagem.enqueue(filaParaPagar.dequeue()); //Adiciona o carro
                                 semaphoreLavagem.release();
+                                //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
                                 if (valorIntroduzido > valorLavagem) {
                                     sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_COM_TROCO); //Notifica que o carro irá iniciar a lavagem e receber troco
                                     sharedMainInterface.setTroco(valorIntroduzido - valorLavagem);
-                                    semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
                                 } else {
                                     sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_SEM_TROCO);
-                                    semMoedeiroDarOrdem.release();
-                                    semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
                                 }
+                                semaphoreLavagem.release(); //Acrescenta recursos ao semaforo, para que consiga iniciar lavagem
+                                semMoedeiroDarOrdem.release(); //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
+                            }
+                            if (filaParaPagar.isEmpty() && estadoSistema != EstadoSistema.FECHADO) { //Caso o carro que pagou foi o ultimo da fila
+                                try {
+                                    Thread.sleep(1000);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.SEM_CARROS);
+                                semMoedeiroDarOrdem.release();
+                            }
+                            break;
+                        case "C":
+                            if (sharedMainInterface.getValorIntroduzido() > 0) {
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.RETIRADA_CARRO_COM_DEVOLUCAO); //Notifica que deve devolver
+                            } else {
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.RETIRADA_CARRO_COM_DEVOLUCAO); //Notifica que não é necessário devolver
+                            }
+                            filaParaPagar.dequeue(); //Retira o carro da queue
+                            semMoedeiroDarOrdem.release();
+                            if (filaParaPagar.isEmpty() && estadoSistema != EstadoSistema.FECHADO) { //Caso o carro que cancelou foi o ultimo da fila
+                                try {
+                                    Thread.sleep(200);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.SEM_CARROS);
+                                semMoedeiroDarOrdem.release();
+                            }
+                            break;
+                        case "A/F":
+                            if (estadoSistema == EstadoSistema.LIVRE || estadoSistema == EstadoSistema.OCUPADO) {
+                                if (sharedMainInterface.getValorIntroduzido() > 0) {
+                                    sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.FECHO_COM_DEVOLUCAO);
+                                } else {
+                                    sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.FECHO_SEM_DEVOLUCAO);
+                                }
+                                filaParaPagar = new LinkedQueue<>(); //Limpa a queue
+                                estadoSistema = EstadoSistema.FECHADO;
+                            } else {
+                                estadoSistema = EstadoSistema.LIVRE;
+                                sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.RETOMAR_SISTEMA);
+                            }
+                            semMoedeiroDarOrdem.release();
+                            break;
+                        case "Ver logs":
+                            try {
+                                //Verifica qual o sistema operativo do utilizador e executa o processo correspondente
+                                if (SystemUtils.IS_OS_WINDOWS) {
+                                    new ProcessBuilder("notepad", "files/log.txt").start();
+                                } else if (SystemUtils.IS_OS_MAC) {
+                                    new ProcessBuilder("open", "files/log.txt").start();
+                                } else if (SystemUtils.IS_OS_LINUX) {
+                                    new ProcessBuilder("vim", "files/log.txt").start();
+                                } else { //Caso não seja encontrado é lançado um erro
+                                    JOptionPane.showMessageDialog(null, "O seu sistema operativo nao e suportado", "InfoBox: " + "Erro ao abrir log", JOptionPane.INFORMATION_MESSAGE);
+                                }
+                            } catch (IOException ex) {
+                                JOptionPane.showMessageDialog(null, "Nao foi possivel executar o processo, este erro pode estar relacionado com o tipo de sistema operativo.", "Erro ao abrir log", JOptionPane.INFORMATION_MESSAGE);
                             }
                             break;
                     }
                 }
-
             }
         }
     }
@@ -168,7 +260,6 @@ public class Main {
             e.printStackTrace();
         }
 
-
         filaParaPagar = new LinkedQueue<>();
         filaLavagem = new LinkedQueue<>();
 
@@ -176,13 +267,12 @@ public class Main {
 
         carrosTotais = 0;
         carrosLavados = 0;
-        sistemaEstaSuspenso = false;
 
         Semaphore semaphoreTapete = new Semaphore(0);
         SharedMainTapete sharedMainTapete = new SharedMainTapete();
         sharedMainTapete.setDelayInicial(tempoInicialTapete);
         tapete = new Tapete(semaphoreTapete, sharedMainTapete);
-        Thread threadTapete = new Thread(tapete, "Th[TAPETE]");
+        Thread threadTapete = new Thread(tapete, "TH[TAPETE]");
         threadTapete.start();
 
         semaphoreLavagem = new Semaphore(0);
@@ -190,7 +280,7 @@ public class Main {
 
         Semaphore semaphoreRolos = new Semaphore(0);
         SharedMainRolos sharedMainRolos = new SharedMainRolos();
-        sharedMainRolos.setDuracao(tempoMaxRolos);
+        sharedMainRolos.setDuracao(randomNumber(tempoMinRolos, tempoMaxRolos));
         rolos = new Rolos(semaphoreRolos, sharedMainRolos);
         Thread threadRolos = new Thread(rolos, "TH[ROLOS]");
         threadRolos.start();
@@ -199,7 +289,7 @@ public class Main {
         SharedMainAspersoresSecadores sharedMainAspersoresSecadores = new SharedMainAspersoresSecadores();
         sharedMainAspersoresSecadores.setDuracaoAspersores(tempoAspersores);
         aspersoresSecadores = new AspersoresSecadores(semaphoreAspSecador, sharedMainAspersoresSecadores);
-        Thread threadAspersoresSecadores = new Thread(aspersoresSecadores, "TH[ASPERSORES]");
+        Thread threadAspersoresSecadores = new Thread(aspersoresSecadores, "TH[ASP E SEC]");
         threadAspersoresSecadores.start();
 
         semaphoreLog = new Semaphore(0);
@@ -220,14 +310,14 @@ public class Main {
 
         mostrarJanela();
 
-        while (true) {
-            labelEstadoSistema.setText("<html><p style=\"text-align:center;\">Estado Sistema = " + estadoSistema + "</p><br></html>");
-            labelLavados.setText("<html><p style=\"text-align:center;\">Lavagens = " + carrosLavados + "</p><br></html>");
-            labelTotal.setText("<html><p style=\"text-align:center;\">Carros que passaram aqui = " + carrosTotais + "</p><br></html>");
-            labelFila.setText("<html><p style=\"text-align:center;\">Carros na fila = " + filaLavagem.size() + "</p><br></html>");
+        Thread threadAtualizaLabels = new ThreadAtualizaLabels();
+        threadAtualizaLabels.start();
 
-            if (semaphoreLavagem.availablePermits() == 1) { //Entra se a lavagem iniciou ou há permissao para tal
-                estadoSistema = EstadoSistema.OCUPADO;
+        while (true) {
+            if (semaphoreLavagem.availablePermits() > 0) { //Entra se a lavagem iniciou ou há permissao para tal
+                if (estadoSistema != EstadoSistema.FECHADO) {
+                    estadoSistema = EstadoSistema.OCUPADO;
+                }
                 atualizarLabels();
 
                 sharedMainLog.setMessage(filaLavagem.first().getNome() + " iniciou lavagem");
@@ -266,7 +356,7 @@ public class Main {
                 semaphoreAspSecador.acquire(); //Entra quando secadores acabarem
                 estadoLavagem = EstadoLavagem.FINALIZADA;
 
-                Thread.sleep(3000); //Espera 3 segundos antes de terminar tapete e finalizar lavagem
+                Thread.sleep(tempoFinalTapete * 1000L); //Espera 3 segundos antes de terminar tapete e finalizar lavagem
                 sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.PARAR);
                 semaphoreTapete.release();
 
@@ -275,7 +365,9 @@ public class Main {
                 Thread.sleep(200);
                 semaphoreLog.acquire();
 
-                estadoSistema = EstadoSistema.LIVRE;
+                if (estadoSistema != EstadoSistema.FECHADO) {
+                    estadoSistema = EstadoSistema.LIVRE;
+                }
                 carrosLavados++;
                 estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;
                 semaphoreLavagem.acquire(); //Tira o recurso da lavagem

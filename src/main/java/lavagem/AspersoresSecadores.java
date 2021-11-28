@@ -4,10 +4,13 @@ import enumerations.EstadoAspersoresSecadores;
 import enumerations.EstadoRolos;
 import sharedobjects.SharedMainAspersoresSecadores;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
 import static lavagem.Main.semaphoreLog;
@@ -53,7 +56,7 @@ public class AspersoresSecadores implements Runnable {
     }
 
     private void mostrarJanela() {
-        JFrame janela = new JFrame("Rolos");
+        JFrame janela = new JFrame("Aspersores e Secadores");
         janela.getContentPane().setLayout(new FlowLayout());
 
         labelEstado = new JLabel("<html><p style=\"text-align:center;\">Estado Aspersor/Secador = " + this.estado + "</p><br></html>");
@@ -61,6 +64,10 @@ public class AspersoresSecadores implements Runnable {
 
         janela.add(labelEstado);
 
+        try {
+            janela.setIconImage(ImageIO.read(new File("files/icon.jpg")));
+        } catch (IOException e) {
+        }
         janela.pack();
         janela.setSize(300, 95);
         janela.setLocation(740, 510);

@@ -3,12 +3,14 @@ package lavagem;
 import enumerations.EstadoRolos;
 import sharedobjects.SharedMainRolos;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TransferQueue;
 
 import static lavagem.Main.semaphoreLog;
 import static lavagem.Main.sharedMainLog;
@@ -57,6 +59,10 @@ public class Rolos implements Runnable {
 
         janela.add(labelEstado);
 
+        try {
+            janela.setIconImage(ImageIO.read(new File("files/icon.jpg")));
+        } catch (IOException ignored) {
+        }
         janela.pack();
         janela.setSize(300, 95);
         janela.setLocation(740, 620);

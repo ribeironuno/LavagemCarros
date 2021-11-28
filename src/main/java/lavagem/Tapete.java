@@ -67,7 +67,7 @@ public class Tapete implements Runnable {
         janela.add(labelEstado);
 
         try {
-            janela.setIconImage(ImageIO.read(new File("files/icon.jpg")));
+            janela.setIconImage(ImageIO.read(new File("images/icon.jpg")));
         } catch (IOException ignored) {
         }
         janela.pack();

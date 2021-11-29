@@ -177,7 +177,6 @@ public class Main {
                                 semMoedeiroDarOrdem.release();
                             } else {
                                 filaLavagem.enqueue(filaParaPagar.dequeue()); //Adiciona o carro
-                                semaphoreLavagem.release();
                                 //Dá permissão a thread moedeiro para conseguir trabalhar e ver as notificações do main
                                 if (valorIntroduzido > valorLavagem) {
                                     sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.LAVAGEM_ACEITE_COM_TROCO); //Notifica que o carro irá iniciar a lavagem e receber troco

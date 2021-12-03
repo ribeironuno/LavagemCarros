@@ -29,6 +29,8 @@ public class Rolos implements Runnable {
 
     private Semaphore semaphoreDaSinal;
 
+    private Semaphore semaphoreSuspender;
+
     private SharedMainRolos sharedObj;
 
     JLabel labelEstado;
@@ -37,8 +39,9 @@ public class Rolos implements Runnable {
      * Instancia os rolos com a duração enviada por parametero lida
      * atraves do ficheiro de configuração
      */
-    public Rolos(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, SharedMainRolos sharedObj) {
+    public Rolos(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, Semaphore semaphoreSuspender, SharedMainRolos sharedObj) {
         this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
+        this.semaphoreSuspender = semaphoreSuspender;
         this.semaphoreDaSinal = semaphoreDaSinal;
         this.estado = EstadoRolos.PARADO;
         this.sharedObj = sharedObj;
@@ -94,8 +97,7 @@ public class Rolos implements Runnable {
         while (true) {
             try {
                 semaphoreRecebeOrdem.acquire();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            } catch (InterruptedException ignored) {
             }
 
             switch (sharedObj.getPedidoMain()) {
@@ -108,7 +110,21 @@ public class Rolos implements Runnable {
                     try {
                         Thread.sleep(sharedObj.getDuracao() * 1000L); //Aguarda o tempo dado pela main
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+
+                        if (sharedObj.getPedidoMain() == SharedMainRolos.PedidoMain.SUSPENDER) { //Caso a interrupção seja por pedido de suspensão
+                            estado = EstadoRolos.PARADO;
+                            this.atualizarLabel();
+                            long tempoRestante = (sharedObj.getDuracao() * 1000L) - (System.currentTimeMillis() - tempoInicio); //Obtem duracao que resta
+                            System.out.println(Thread.currentThread().getName() + ": Suspenso. Fica a faltar " + tempoRestante + "ms para acabar após retoma");
+                            try {
+                                semaphoreSuspender.acquire(); //Espera que a main liberte o recurso, ou seja, tire do botao de emergencia
+                                System.out.println(Thread.currentThread().getName() + ": Retomaram");
+                                estado = EstadoRolos.ATIVO;
+                                this.atualizarLabel();
+                                Thread.sleep(tempoRestante);
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
                     }
 
                     this.estado = EstadoRolos.PARADO; //Para rolos

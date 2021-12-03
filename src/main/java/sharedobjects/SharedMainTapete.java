@@ -3,7 +3,7 @@ package sharedobjects;
 public class SharedMainTapete {
 
     public enum PedidoMain {
-        PARAR, LIGAR_FRENTE, LIGAR_TRAS;
+        PARAR, LIGAR_FRENTE, LIGAR_TRAS, SUSPENDER;
     }
 
     private PedidoMain pedidoMain;

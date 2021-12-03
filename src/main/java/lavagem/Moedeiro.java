@@ -16,8 +16,8 @@ import static lavagem.Main.sharedMainLog;
 public class Moedeiro implements ActionListener, Runnable {
     JFrame janela;
 
-    private Semaphore semDarOrdem; //Semaforo que irá dar ordem ao main e aguadar pelo processamento do mesmo
-    private Semaphore semReceberOrdem; //Semaforo que
+    private Semaphore semaphoreDarOrdem; //Semaforo que irá dar ordem ao main e aguadar pelo processamento do mesmo
+    private Semaphore semaphoreReceberOrdem; //Semaforo que
     private SharedMainInterface sharedObj;
 
     private JLabel labelB = new JLabel("<html><body>Introduzido - 0.00 Euros <br></body></html>");
@@ -40,9 +40,9 @@ public class Moedeiro implements ActionListener, Runnable {
 
 
     public Moedeiro(Semaphore semDarOdem, Semaphore semReceberOrdem, SharedMainInterface buffer) {
-        this.semDarOrdem = semDarOdem;
+        this.semaphoreDarOrdem = semDarOdem;
         this.sharedObj = buffer;
-        this.semReceberOrdem = semReceberOrdem;
+        this.semaphoreReceberOrdem = semReceberOrdem;
     }
 
     public void mostraJanela() {
@@ -119,7 +119,7 @@ public class Moedeiro implements ActionListener, Runnable {
         botaoI.addActionListener(this);
         botaoC.addActionListener(this);
         botaoR.addActionListener(this);
-        botaoR.addActionListener(this);
+        botaoE.addActionListener(this);
         botaoAF.addActionListener(this);
         botaoAdd.addActionListener(this);
         botaoAbrirLog.addActionListener(this);
@@ -163,26 +163,26 @@ public class Moedeiro implements ActionListener, Runnable {
             labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
         } else if (action.equals("I")) {
             sharedObj.setBotao("I");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
         } else if (action.equals("C")) {
             sharedObj.setBotao("C");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
             labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
         } else if (action.equals("E")) {
             sharedObj.setBotao("E");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
         } else if (action.equals("R")) {
             sharedObj.setBotao("R");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
         } else if (action.equals("A/F")) {
             sharedObj.setBotao("A/F");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
         } else if (action.equals("Adicionar carro")) {
             sharedObj.setBotao("Adicionar carro");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
         } else if (action.equals("Ver logs")) {
             sharedObj.setBotao("Ver logs");
-            semDarOrdem.release();
+            semaphoreDarOrdem.release();
         }
     }
 
@@ -227,7 +227,7 @@ public class Moedeiro implements ActionListener, Runnable {
             }
 
             try {
-                semReceberOrdem.acquire(); //Espera pela ordem do main
+                semaphoreReceberOrdem.acquire(); //Espera pela ordem do main
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -286,6 +286,17 @@ public class Moedeiro implements ActionListener, Runnable {
                 case RETOMAR_SISTEMA:
                     labelEstado.setText("<html><body>Notificacao: Sem carros <br></body></html>");
                     //No método desativarBotoes estes 2 botoes nao ativam
+                    botaoAdd.setEnabled(true);
+                    botaoAF.setEnabled(true);
+                    break;
+                case SUSPENDER:
+                    desativarBotoes();
+                    botaoE.setEnabled(true);
+                    botaoAdd.setEnabled(false);
+                    botaoAF.setEnabled(false);
+                    break;
+                case TIRAR_SUSPENCAO:
+                    ativarBotoes();
                     botaoAdd.setEnabled(true);
                     botaoAF.setEnabled(true);
                     break;

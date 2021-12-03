@@ -28,7 +28,9 @@ public class AspersoresSecadores implements Runnable {
      */
     private Semaphore semaphoreRecebeOrdem;
 
-    private Semaphore getSemaphoreDaSinal;
+    private Semaphore semaphoreDaSinal;
+
+    private Semaphore semaphoreSuspender;
 
     /**
      * Objeto de troca de mensagens com a main.
@@ -40,11 +42,12 @@ public class AspersoresSecadores implements Runnable {
     /**
      * Instancia Aspersores iniciando com o estado PARADO
      */
-    public AspersoresSecadores(Semaphore semaphoreRecebeOrdem, Semaphore getSemaphoreDaSinal, SharedMainAspersoresSecadores sharedObj) {
+    public AspersoresSecadores(Semaphore semaphoreRecebeOrdem, Semaphore getSemaphoreDaSinal, Semaphore semaphoreSuspender, SharedMainAspersoresSecadores sharedObj) {
         this.estado = EstadoAspersoresSecadores.PARADO;
         this.sharedObj = sharedObj;
+        this.semaphoreSuspender = semaphoreSuspender;
         this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
-        this.getSemaphoreDaSinal = getSemaphoreDaSinal;
+        this.semaphoreDaSinal = getSemaphoreDaSinal;
     }
 
     /**
@@ -98,8 +101,7 @@ public class AspersoresSecadores implements Runnable {
 
             try {
                 semaphoreRecebeOrdem.acquire();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            } catch (InterruptedException ignored) {
             }
 
             switch (sharedObj.getPedidoMain()) {
@@ -107,30 +109,67 @@ public class AspersoresSecadores implements Runnable {
                     this.estado = EstadoAspersoresSecadores.EM_ASPIRACAO;
                     System.out.println(Thread.currentThread().getName() + ": Aspersores ligados");
                     this.atualizarLabel();
+
+                    long tempoInicio = System.currentTimeMillis(); //Regista a hora que iniciou caso seja interrompido saber o que falta de espera
+
                     try {
                         Thread.sleep(sharedObj.getDuracaoAspersores() * 1000L);
                     } catch (InterruptedException e) {
-                        System.out.println(e);
+
+                        if (sharedObj.getPedidoMain() == SharedMainAspersoresSecadores.PedidoMain.SUSPENDER) { //Caso a interrupção seja por pedido de suspensão
+                            this.estado = EstadoAspersoresSecadores.PARADO;
+                            this.atualizarLabel();
+                            long tempoRestante = (sharedObj.getDuracaoAspersores() * 1000L) - (System.currentTimeMillis() - tempoInicio); //Obtem duracao que resta
+                            System.out.println(Thread.currentThread().getName() + ": Suspenso. Fica a faltar " + tempoRestante + "ms para acabar após retoma");
+                            try {
+                                semaphoreSuspender.acquire(); //Espera que a main liberte o recurso, ou seja, tire do botao de emergencia
+                                System.out.println(Thread.currentThread().getName() + ": Retomaram");
+                                this.estado = EstadoAspersoresSecadores.EM_ASPIRACAO;
+                                this.atualizarLabel();
+                                Thread.sleep(tempoRestante);
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
+                        this.estado = EstadoAspersoresSecadores.PARADO;
+                        System.out.println(Thread.currentThread().getName() + ": Aspersores desligados");
+                        this.atualizarLabel();
                     }
                     this.estado = EstadoAspersoresSecadores.PARADO;
-                    System.out.println(Thread.currentThread().getName() + ": Aspersores desligados");
                     this.atualizarLabel();
-                    getSemaphoreDaSinal.release();
+                    semaphoreDaSinal.release();
                     break;
 
                 case SECAR:
                     this.estado = EstadoAspersoresSecadores.EM_SECAGEM;
                     System.out.println(Thread.currentThread().getName() + ": Secadores ativados");
                     this.atualizarLabel();
+
+                    tempoInicio = System.currentTimeMillis(); //Regista a hora que iniciou caso seja interrompido saber o que falta de espera
+
                     try {
                         Thread.sleep(sharedObj.getDuracaoSecadores() * 1000L);
                     } catch (InterruptedException e) {
-                        System.out.println(e);
+
+                        if (sharedObj.getPedidoMain() == SharedMainAspersoresSecadores.PedidoMain.SUSPENDER) { //Caso a interrupção seja por pedido de suspensão
+                            this.estado = EstadoAspersoresSecadores.PARADO;
+                            this.atualizarLabel();
+                            long tempoRestante = (sharedObj.getDuracaoAspersores() * 1000L) - (System.currentTimeMillis() - tempoInicio); //Obtem duracao que resta
+                            System.out.println(Thread.currentThread().getName() + ": Suspenso. Fica a faltar " + tempoRestante + "ms para acabar após retoma");
+                            try {
+                                semaphoreSuspender.acquire(); //Espera que a main liberte o recurso, ou seja, tire do botao de emergencia
+                                System.out.println(Thread.currentThread().getName() + ": Retomaram");
+                                this.estado = EstadoAspersoresSecadores.EM_SECAGEM;
+                                this.atualizarLabel();
+                                Thread.sleep(tempoRestante);
+                            } catch (InterruptedException ignored) {
+                            }
+                        }
+
                     }
                     System.out.println(Thread.currentThread().getName() + ": Secadores terminaram");
                     this.estado = EstadoAspersoresSecadores.PARADO;
                     this.atualizarLabel();
-                    getSemaphoreDaSinal.release();
+                    semaphoreDaSinal.release();
                     break;
             }
         }

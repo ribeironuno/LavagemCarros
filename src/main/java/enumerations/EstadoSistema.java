@@ -1,5 +1,5 @@
 package enumerations;
 
 public enum EstadoSistema {
-    FECHADO, LIVRE, OCUPADO;
+    FECHADO, LIVRE, OCUPADO, SUSPENSO;
 }

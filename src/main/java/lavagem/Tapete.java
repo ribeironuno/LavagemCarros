@@ -24,6 +24,8 @@ public class Tapete implements Runnable {
 
     private Semaphore semaphoreDaSinal;
 
+    private Semaphore semaphoreSuspender;
+
     /**
      * Estado atual do tapete.
      */
@@ -42,8 +44,9 @@ public class Tapete implements Runnable {
     /**
      * Cria uma instância de tapete,
      */
-    public Tapete(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, SharedMainTapete sharedMainTapete) {
+    public Tapete(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, Semaphore semaphoreSuspender, SharedMainTapete sharedMainTapete) {
         this.estado = EstadoTapete.PARADO;
+        this.semaphoreSuspender = semaphoreSuspender;
         this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
         this.semaphoreDaSinal = semaphoreDaSinal;
         this.sharedObj = sharedMainTapete;
@@ -77,8 +80,8 @@ public class Tapete implements Runnable {
         janela.setLocation(740, 400);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        janela.addWindowListener(new WindowAdapter(){
-            public void windowClosing(WindowEvent e){
+        janela.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
                 semaphoreLogDaOrdem.release();
                 sharedMainLog.setMessage("close");
             }
@@ -100,8 +103,7 @@ public class Tapete implements Runnable {
         while (true) {
             try {
                 semaphoreRecebeOrdem.acquire();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            } catch (InterruptedException ignored) {
             }
 
             switch (sharedObj.getPedidoMain()) {
@@ -121,6 +123,21 @@ public class Tapete implements Runnable {
                     this.estado = EstadoTapete.PARADO;
                     System.out.println(Thread.currentThread().getName() + ": Tapete parou");
                     this.atualizarLabel();
+                    break;
+                case SUSPENDER:
+                    if (estado != EstadoTapete.PARADO) {
+                        this.estado = EstadoTapete.PARADO;
+                        System.out.println(Thread.currentThread().getName() + ": Suspensos");
+                        this.atualizarLabel();
+                        try {
+                            semaphoreSuspender.acquire();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println(Thread.currentThread().getName() + ": Retomaram");
+                        this.estado = EstadoTapete.MOV_FRENTE;
+                        this.atualizarLabel();
+                    }
                     break;
             }
         }

@@ -2,7 +2,7 @@ package sharedobjects;
 
 public class SharedMainAspersoresSecadores {
     public enum PedidoMain {
-        ASPIRAR, SECAR;
+        ASPIRAR, SECAR, SUSPENDER;
     }
 
     /**

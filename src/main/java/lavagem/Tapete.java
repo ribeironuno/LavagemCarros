@@ -1,6 +1,5 @@
 package lavagem;
 
-import enumerations.EstadoAspersoresSecadores;
 import enumerations.EstadoTapete;
 import sharedobjects.SharedMainTapete;
 
@@ -13,7 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
-import static lavagem.Main.semaphoreLog;
+import static lavagem.Main.semaphoreLogDaOrdem;
 import static lavagem.Main.sharedMainLog;
 
 public class Tapete implements Runnable {
@@ -21,7 +20,9 @@ public class Tapete implements Runnable {
     /**
      * Semáforo de comunicação entre main e tapete.
      */
-    private Semaphore sem;
+    private Semaphore semaphoreRecebeOrdem;
+
+    private Semaphore semaphoreDaSinal;
 
     /**
      * Estado atual do tapete.
@@ -41,9 +42,10 @@ public class Tapete implements Runnable {
     /**
      * Cria uma instância de tapete,
      */
-    public Tapete(Semaphore sem, SharedMainTapete sharedMainTapete) {
+    public Tapete(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, SharedMainTapete sharedMainTapete) {
         this.estado = EstadoTapete.PARADO;
-        this.sem = sem;
+        this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
+        this.semaphoreDaSinal = semaphoreDaSinal;
         this.sharedObj = sharedMainTapete;
 
     }
@@ -77,7 +79,7 @@ public class Tapete implements Runnable {
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         janela.addWindowListener(new WindowAdapter(){
             public void windowClosing(WindowEvent e){
-                semaphoreLog.release();
+                semaphoreLogDaOrdem.release();
                 sharedMainLog.setMessage("close");
             }
         });
@@ -97,7 +99,7 @@ public class Tapete implements Runnable {
         this.mostrarJanela();
         while (true) {
             try {
-                sem.acquire();
+                semaphoreRecebeOrdem.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -105,14 +107,14 @@ public class Tapete implements Runnable {
             switch (sharedObj.getPedidoMain()) {
                 case LIGAR_FRENTE:
                     try {
-                        Thread.sleep(sharedObj.getDelayInicial() * 1000L);
+                        Thread.sleep(sharedObj.getDelayInicial() * 1000L); //Faz a espera inicial programada
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     this.estado = EstadoTapete.MOV_FRENTE;
                     this.atualizarLabel();
                     System.out.println(Thread.currentThread().getName() + ": Tapete ligado");
-                    sem.release();
+                    semaphoreDaSinal.release();
 
                     break;
                 case PARAR:
@@ -120,12 +122,6 @@ public class Tapete implements Runnable {
                     System.out.println(Thread.currentThread().getName() + ": Tapete parou");
                     this.atualizarLabel();
                     break;
-            }
-
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
     }

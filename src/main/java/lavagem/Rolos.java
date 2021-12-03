@@ -12,7 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
-import static lavagem.Main.semaphoreLog;
+import static lavagem.Main.semaphoreLogDaOrdem;
 import static lavagem.Main.sharedMainLog;
 
 public class Rolos implements Runnable {
@@ -25,7 +25,9 @@ public class Rolos implements Runnable {
     /**
      * Semáforo que serve de comunicação entre main e rolos.
      */
-    private Semaphore sem;
+    private Semaphore semaphoreRecebeOrdem;
+
+    private Semaphore semaphoreDaSinal;
 
     private SharedMainRolos sharedObj;
 
@@ -35,8 +37,9 @@ public class Rolos implements Runnable {
      * Instancia os rolos com a duração enviada por parametero lida
      * atraves do ficheiro de configuração
      */
-    public Rolos(Semaphore sem, SharedMainRolos sharedObj) {
-        this.sem = sem;
+    public Rolos(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, SharedMainRolos sharedObj) {
+        this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
+        this.semaphoreDaSinal = semaphoreDaSinal;
         this.estado = EstadoRolos.PARADO;
         this.sharedObj = sharedObj;
     }
@@ -70,7 +73,7 @@ public class Rolos implements Runnable {
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         janela.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                semaphoreLog.release();
+                semaphoreLogDaOrdem.release();
                 sharedMainLog.setMessage("close");
             }
         });
@@ -90,7 +93,7 @@ public class Rolos implements Runnable {
         this.mostrarJanela();
         while (true) {
             try {
-                sem.acquire();
+                semaphoreRecebeOrdem.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -101,21 +104,18 @@ public class Rolos implements Runnable {
                     System.out.println(Thread.currentThread().getName() + ": Rolos ativaram");
                     this.atualizarLabel();
                     long tempoInicio = System.currentTimeMillis(); //Regista a hora que iniciou caso seja interrompido saber o que falta de espera
+
                     try {
                         Thread.sleep(sharedObj.getDuracao() * 1000L); //Aguarda o tempo dado pela main
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
+
                     this.estado = EstadoRolos.PARADO; //Para rolos
                     System.out.println(Thread.currentThread().getName() + ": Rolos acabaram");
                     this.atualizarLabel();
-                    sem.release(); //Notifica main
+                    semaphoreDaSinal.release();
                     break;
-            }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
     }

@@ -1,7 +1,6 @@
 package lavagem;
 
 import enumerations.EstadoAspersoresSecadores;
-import enumerations.EstadoRolos;
 import sharedobjects.SharedMainAspersoresSecadores;
 
 import javax.imageio.ImageIO;
@@ -13,11 +12,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
-import static lavagem.Main.semaphoreLog;
+import static lavagem.Main.semaphoreLogDaOrdem;
 import static lavagem.Main.sharedMainLog;
 
 public class AspersoresSecadores implements Runnable {
-
 
     /**
      * Estado dos aspersores e secadores
@@ -28,7 +26,9 @@ public class AspersoresSecadores implements Runnable {
     /**
      * Semáforo que irá sinalizar que o aspirador/secador acabaram os seus processos.
      */
-    private Semaphore sem;
+    private Semaphore semaphoreRecebeOrdem;
+
+    private Semaphore getSemaphoreDaSinal;
 
     /**
      * Objeto de troca de mensagens com a main.
@@ -40,10 +40,11 @@ public class AspersoresSecadores implements Runnable {
     /**
      * Instancia Aspersores iniciando com o estado PARADO
      */
-    public AspersoresSecadores(Semaphore sem, SharedMainAspersoresSecadores sharedObj) {
+    public AspersoresSecadores(Semaphore semaphoreRecebeOrdem, Semaphore getSemaphoreDaSinal, SharedMainAspersoresSecadores sharedObj) {
         this.estado = EstadoAspersoresSecadores.PARADO;
         this.sharedObj = sharedObj;
-        this.sem = sem;
+        this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
+        this.getSemaphoreDaSinal = getSemaphoreDaSinal;
     }
 
     /**
@@ -73,9 +74,9 @@ public class AspersoresSecadores implements Runnable {
         janela.setLocation(740, 510);
         janela.setVisible(true);
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        janela.addWindowListener(new WindowAdapter(){
-            public void windowClosing(WindowEvent e){
-                semaphoreLog.release();
+        janela.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                semaphoreLogDaOrdem.release();
                 sharedMainLog.setMessage("close");
             }
         });
@@ -96,7 +97,7 @@ public class AspersoresSecadores implements Runnable {
         while (true) {
 
             try {
-                sem.acquire();
+                semaphoreRecebeOrdem.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -114,7 +115,7 @@ public class AspersoresSecadores implements Runnable {
                     this.estado = EstadoAspersoresSecadores.PARADO;
                     System.out.println(Thread.currentThread().getName() + ": Aspersores desligados");
                     this.atualizarLabel();
-                    sem.release();
+                    getSemaphoreDaSinal.release();
                     break;
 
                 case SECAR:
@@ -129,13 +130,8 @@ public class AspersoresSecadores implements Runnable {
                     System.out.println(Thread.currentThread().getName() + ": Secadores terminaram");
                     this.estado = EstadoAspersoresSecadores.PARADO;
                     this.atualizarLabel();
-                    sem.release();
+                    getSemaphoreDaSinal.release();
                     break;
-            }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
     }

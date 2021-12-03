@@ -10,7 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
-import static lavagem.Main.semaphoreLog;
+import static lavagem.Main.semaphoreLogDaOrdem;
 import static lavagem.Main.sharedMainLog;
 
 public class Moedeiro implements ActionListener, Runnable {
@@ -135,7 +135,7 @@ public class Moedeiro implements ActionListener, Runnable {
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         janela.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                semaphoreLog.release();
+                semaphoreLogDaOrdem.release();
                 sharedMainLog.setMessage("close");
             }
         });

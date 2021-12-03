@@ -54,7 +54,8 @@ public class Main {
     private static SharedMainInterface sharedMainInterface;
     private static Semaphore semMoedeiroDarOrdem;
     private static Semaphore semaphoreLavagem;
-    public static Semaphore semaphoreLog;
+    public static Semaphore semaphoreLogDaOrdem;
+    public static Semaphore semaphoreLogRecebeSinal;
     public static SharedMainLog sharedMainLog;
 
     private static void lerDados(String caminho) throws IOException, ParseException {
@@ -102,7 +103,7 @@ public class Main {
         janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         janela.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                semaphoreLog.release();
+                semaphoreLogDaOrdem.release();
                 sharedMainLog.setMessage("close");
             }
         });
@@ -267,33 +268,36 @@ public class Main {
         carrosTotais = 0;
         carrosLavados = 0;
 
-        Semaphore semaphoreTapete = new Semaphore(0);
+        Semaphore semaphoreTapeteDaOrdem = new Semaphore(0);
+        Semaphore semaphoreTapeteRecebeOrdem = new Semaphore(0);
         SharedMainTapete sharedMainTapete = new SharedMainTapete();
         sharedMainTapete.setDelayInicial(tempoInicialTapete);
-        tapete = new Tapete(semaphoreTapete, sharedMainTapete);
+        tapete = new Tapete(semaphoreTapeteDaOrdem, semaphoreTapeteRecebeOrdem, sharedMainTapete);
         Thread threadTapete = new Thread(tapete, "TH[TAPETE]");
         threadTapete.start();
 
         semaphoreLavagem = new Semaphore(0);
-        EstadoLavagem estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;
 
-        Semaphore semaphoreRolos = new Semaphore(0);
+        Semaphore semaphoreRolosDaOrdem = new Semaphore(0);
+        Semaphore semaphoreRolosRecebe = new Semaphore(0);
         SharedMainRolos sharedMainRolos = new SharedMainRolos();
         sharedMainRolos.setDuracao(randomNumber(tempoMinRolos, tempoMaxRolos));
-        rolos = new Rolos(semaphoreRolos, sharedMainRolos);
+        rolos = new Rolos(semaphoreRolosDaOrdem, semaphoreRolosRecebe, sharedMainRolos);
         Thread threadRolos = new Thread(rolos, "TH[ROLOS]");
         threadRolos.start();
 
-        Semaphore semaphoreAspSecador = new Semaphore(0); //Dá ordem
+        Semaphore semaphoreAspSecadorDaOrdem = new Semaphore(0); //Dá ordem
+        Semaphore semaphoreAspSecadorRecebeSinal = new Semaphore(0); //Dá ordem
         SharedMainAspersoresSecadores sharedMainAspersoresSecadores = new SharedMainAspersoresSecadores();
         sharedMainAspersoresSecadores.setDuracaoAspersores(tempoAspersores);
-        aspersoresSecadores = new AspersoresSecadores(semaphoreAspSecador, sharedMainAspersoresSecadores);
+        aspersoresSecadores = new AspersoresSecadores(semaphoreAspSecadorDaOrdem, semaphoreAspSecadorRecebeSinal, sharedMainAspersoresSecadores);
         Thread threadAspersoresSecadores = new Thread(aspersoresSecadores, "TH[ASP E SEC]");
         threadAspersoresSecadores.start();
 
-        semaphoreLog = new Semaphore(0);
+        semaphoreLogDaOrdem = new Semaphore(0);
+        semaphoreLogRecebeSinal = new Semaphore(0);
         sharedMainLog = new SharedMainLog();
-        Log log = new Log(semaphoreLog, sharedMainLog);
+        Log log = new Log(semaphoreLogDaOrdem, semaphoreLogRecebeSinal, sharedMainLog);
         Thread threadLog = new Thread(log, "TH[LOG]");
         threadLog.start();
 
@@ -314,61 +318,47 @@ public class Main {
 
         while (true) {
             if (semaphoreLavagem.availablePermits() > 0) { //Entra se a lavagem iniciou ou há permissao para tal
-                if (estadoSistema != EstadoSistema.FECHADO) {
+                if (estadoSistema != EstadoSistema.FECHADO) { //Caso o sistema estaja LIVRE muda para OCUPADO, caso esteja FECHADO continua
                     estadoSistema = EstadoSistema.OCUPADO;
                 }
                 atualizarLabels();
 
                 sharedMainLog.setMessage(filaLavagem.first().getNome() + " iniciou lavagem");
-                semaphoreLog.release();
-                Thread.sleep(200);
-                semaphoreLog.acquire();
+                semaphoreLogDaOrdem.release(); //Da sinal para escrever no ficheiro de log a entrada do carro
+                semaphoreLogRecebeSinal.acquire(); //Espera que a thread escreva no ficheiro
 
                 sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.LIGAR_FRENTE);
-                estadoLavagem = EstadoLavagem.ESPERA_POR_TAPETE;
-                semaphoreTapete.release();
+                semaphoreTapeteDaOrdem.release();
 
-                Thread.sleep(200);
-
-                semaphoreTapete.acquire(); //Verifica se o tapete já está a correr, pois ele tem delay para começar
+                semaphoreTapeteRecebeOrdem.acquire(); //Verifica se o tapete já está a correr, pois ele tem delay para começar
                 sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.ASPIRAR);
-                estadoLavagem = EstadoLavagem.ASPERSORES_EM_PROCESSO;
-                semaphoreAspSecador.release();
+                semaphoreAspSecadorDaOrdem.release();
 
-                Thread.sleep(200);
-
-                semaphoreAspSecador.acquire(); //Espera que os aspersores terminem
+                semaphoreAspSecadorRecebeSinal.acquire(); //Espera que os aspersores terminem
                 sharedMainRolos.setPedidoMain(SharedMainRolos.PedidoMain.LIGAR);
-                estadoLavagem = EstadoLavagem.ROLOS_EM_PROCESSO;
-                semaphoreRolos.release();
+                semaphoreRolosDaOrdem.release();
 
-                Thread.sleep(200);
 
-                semaphoreRolos.acquire(); //Entra quando os rolos acabarem
+                semaphoreRolosRecebe.acquire(); //Entra quando os rolos acabarem
                 sharedMainAspersoresSecadores.setDuracaoSecadores(randomNumber(tempoSecadorMin, tempoSecadorMax));
                 sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.SECAR);
-                estadoLavagem = EstadoLavagem.SECADOR_EM_PROCESSO;
-                semaphoreAspSecador.release();
+                semaphoreAspSecadorDaOrdem.release();
 
-                Thread.sleep(200);
 
-                semaphoreAspSecador.acquire(); //Entra quando secadores acabarem
-                estadoLavagem = EstadoLavagem.FINALIZADA;
+                semaphoreAspSecadorRecebeSinal.acquire(); //Entra quando secadores acabarem
 
                 Thread.sleep(tempoFinalTapete * 1000L); //Espera 3 segundos antes de terminar tapete e finalizar lavagem
                 sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.PARAR);
-                semaphoreTapete.release();
+                semaphoreTapeteDaOrdem.release();
 
                 sharedMainLog.setMessage(filaLavagem.dequeue().getNome() + " terminou lavagem");
-                semaphoreLog.release();
-                Thread.sleep(200);
-                semaphoreLog.acquire();
+                semaphoreLogDaOrdem.release(); //Da ordem para escrever no ficheiro de log a saida do carro
+                semaphoreLogRecebeSinal.acquire(); //Espera que a thread escreva no ficheiro
 
                 if (estadoSistema != EstadoSistema.FECHADO) {
                     estadoSistema = EstadoSistema.LIVRE;
                 }
                 carrosLavados++;
-                estadoLavagem = EstadoLavagem.AINDA_NAO_INICIOU;
                 semaphoreLavagem.acquire(); //Tira o recurso da lavagem
                 System.out.println("Fila de espera: " + filaLavagem);
             }

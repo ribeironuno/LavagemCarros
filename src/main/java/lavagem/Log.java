@@ -15,7 +15,9 @@ public class Log implements Runnable {
     /**
      * Semaforo que faz a comunicação entre a main e a log
      */
-    private Semaphore sem;
+    private Semaphore semaphoreRecebeOrdem;
+
+    private Semaphore semaphoreDaSinal;
 
     /**
      * Objecto partilhado utilizado para enviar a mensagem de escrita
@@ -35,12 +37,14 @@ public class Log implements Runnable {
 
     /**
      * Instancia Log com semaforo e objecto partilhado por parametro. Instancia biblioteca de escrita em ficheiro
-     * @param sem Semaforo que faz a comunicação entre a main e a log
+     *
+     * @param sem       Semaforo que faz a comunicação entre a main e a log
      * @param sharedObj Objecto partilhado utilizado para enviar a mensagem de escrita
      * @throws IOException Se ocorrer algum erro na escrita de ficheiro
      */
-    public Log(Semaphore sem, SharedMainLog sharedObj) throws IOException {
-        this.sem = sem;
+    public Log(Semaphore semaphoreRecebeOrdem, Semaphore semaphoreDaSinal, SharedMainLog sharedObj) throws IOException {
+        this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
+        this.semaphoreDaSinal = semaphoreDaSinal;
         this.sharedObj = sharedObj;
         this.file = new File("files/log.txt");
         this.fw = new FileWriter(this.file, true);
@@ -51,20 +55,15 @@ public class Log implements Runnable {
     public void run() {
         while (true) {
             try {
-                sem.acquire();
+                semaphoreRecebeOrdem.acquire();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             if (sharedObj.getMessage().equals("close")) {
                 this.pw.close();
             }
-            this.pw.println(date.format(LocalDateTime.now()) + " " +sharedObj.getMessage());
-            sem.release();
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            this.pw.println(date.format(LocalDateTime.now()) + " " + sharedObj.getMessage());
+            semaphoreDaSinal.release();
         }
     }
 }

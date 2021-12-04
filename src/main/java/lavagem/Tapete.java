@@ -50,7 +50,6 @@ public class Tapete implements Runnable {
         this.semaphoreRecebeOrdem = semaphoreRecebeOrdem;
         this.semaphoreDaSinal = semaphoreDaSinal;
         this.sharedObj = sharedMainTapete;
-
     }
 
     /**

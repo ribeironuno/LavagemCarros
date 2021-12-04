@@ -16,8 +16,19 @@ import static lavagem.Main.sharedMainLog;
 public class Moedeiro implements ActionListener, Runnable {
     JFrame janela;
 
-    private Semaphore semaphoreDarOrdem; //Semaforo que irá dar ordem ao main e aguadar pelo processamento do mesmo
-    private Semaphore semaphoreReceberOrdem; //Semaforo que
+    /**
+     * Semaforo que irá dar ordem ao main e aguadar pelo processamento do mesmo
+     */
+    private Semaphore semaphoreDarOrdem;
+
+    /**
+     * Semaforo que diz que a main deu ordem
+     */
+    private Semaphore semaphoreReceberOrdem;
+
+    /**
+     * Objeto partilhado para troca de informações
+     */
     private SharedMainInterface sharedObj;
 
     private JLabel labelB = new JLabel("<html><body>Introduzido - 0.00 Euros <br></body></html>");
@@ -145,7 +156,6 @@ public class Moedeiro implements ActionListener, Runnable {
     public void actionPerformed(ActionEvent ae) {
         String action = ae.getActionCommand();
 
-        // este código pode ser melhorado
         if (action.equals("0.10")) {
             sharedObj.setValorIntroduzido(0.10);
             labelB.setText("<html><body>Introduzido - " + String.format("%.1f", sharedObj.getValorIntroduzido()) + "Euros <br></body></html>");
@@ -203,6 +213,9 @@ public class Moedeiro implements ActionListener, Runnable {
         this.botaoR.setEnabled(false);
     }
 
+    /**
+     * Ativa os botoes
+     */
     public void ativarBotoes() {
         this.imageButton1.setEnabled(true);
         this.imageButton2.setEnabled(true);

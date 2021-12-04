@@ -24,12 +24,18 @@ public class AspersoresSecadores implements Runnable {
 
 
     /**
-     * Semáforo que irá sinalizar que o aspirador/secador acabaram os seus processos.
+     * Semáforo que irá sinalizar quando a main der ordem.
      */
     private Semaphore semaphoreRecebeOrdem;
 
+    /**
+     * Semáforo que irá notificar a main que o processo acabou.
+     */
     private Semaphore semaphoreDaSinal;
 
+    /**
+     * Semáforo que irá dizer quando o método de suspender acabar.
+     */
     private Semaphore semaphoreSuspender;
 
     /**

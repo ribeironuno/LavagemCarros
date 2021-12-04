@@ -13,10 +13,13 @@ import java.util.concurrent.Semaphore;
 public class Log implements Runnable {
 
     /**
-     * Semaforo que faz a comunicação entre a main e a log
+     * Semaforo que recebe sinal que e para escrever.
      */
     private Semaphore semaphoreRecebeOrdem;
 
+    /**
+     * Semaforo que da sinal c main que ja escreveu.
+     */
     private Semaphore semaphoreDaSinal;
 
     /**

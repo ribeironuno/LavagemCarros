@@ -27,8 +27,14 @@ public class Rolos implements Runnable {
      */
     private Semaphore semaphoreRecebeOrdem;
 
+    /**
+     * Semaforo que da sinal a main que acabou
+     */
     private Semaphore semaphoreDaSinal;
 
+    /**
+     * Semaforo que da indicacao para quando acabar a suspensao
+     */
     private Semaphore semaphoreSuspender;
 
     private SharedMainRolos sharedObj;

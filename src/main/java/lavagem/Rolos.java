@@ -1,6 +1,7 @@
 package lavagem;
 
 import enumerations.EstadoRolos;
+import enumerations.EstadoTapete;
 import sharedobjects.SharedMainRolos;
 
 import javax.imageio.ImageIO;
@@ -137,6 +138,11 @@ public class Rolos implements Runnable {
                     System.out.println(Thread.currentThread().getName() + ": Rolos acabaram");
                     this.atualizarLabel();
                     semaphoreDaSinal.release();
+                    break;
+                case PARAR:
+                    this.estado = EstadoRolos.PARADO;
+                    System.out.println(Thread.currentThread().getName() + ": Rolo parou");
+                    this.atualizarLabel();
                     break;
             }
         }

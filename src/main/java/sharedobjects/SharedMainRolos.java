@@ -5,7 +5,7 @@ public class SharedMainRolos {
      * Tipo de pedidos da main.
      */
     public enum PedidoMain {
-        LIGAR, SUSPENDER, RETOMAR;
+        LIGAR, SUSPENDER, RETOMAR, PARAR;
     }
 
     /**

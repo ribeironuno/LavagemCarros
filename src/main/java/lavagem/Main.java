@@ -81,6 +81,8 @@ public class Main {
     private static SharedMainRolos sharedMainRolos;
     private static SharedMainAspersoresSecadores sharedMainAspersoresSecadores;
 
+    private static boolean reset;
+
     private static void lerDados(String caminho) throws IOException, ParseException {
         JSONParser parser = new JSONParser();
         FileReader reader = null;
@@ -305,6 +307,26 @@ public class Main {
                             JOptionPane.showMessageDialog(null, "Nao foi possivel executar o processo, este erro pode estar relacionado com o tipo de sistema operativo.", "Erro ao abrir log", JOptionPane.INFORMATION_MESSAGE);
                         }
                         break;
+                    case "R":
+                        estadoSistema = EstadoSistema.LIVRE;
+
+                        sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.PARAR);
+                        sharedMainRolos.setPedidoMain(SharedMainRolos.PedidoMain.PARAR);
+                        sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.PARAR);
+
+                        threadTapete.interrupt();
+                        threadAspersoresSecadores.interrupt();
+                        threadRolos.interrupt();
+
+                        carrosTotais = 0;
+                        carrosLavados = 0;
+                        filaParaPagar.clear();
+                        filaParaPagar.clear();
+
+                        sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.SEM_CARROS);
+                        semaphoreMoedeiroDarOrdem.release();
+                        reset = true;
+                        break;
                 }
             }
         }
@@ -328,77 +350,91 @@ public class Main {
                 }
                 atualizarLabels();
 
-                //Thread LOG -> ativa e espera acabar
-                sharedMainLog.setMessage(filaLavagem.first().getNome() + " iniciou lavagem");
-                semaphoreLogDaOrdem.release(); //Da sinal para escrever no ficheiro de log a entrada do carro
-                try {
-                    semaphoreLogRecebeSinal.acquire(); //Espera que a thread escreva no ficheiro
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!reset) {
+                    //Thread LOG -> ativa e espera acabar
+                    sharedMainLog.setMessage(filaLavagem.first().getNome() + " iniciou lavagem");
+                    semaphoreLogDaOrdem.release(); //Da sinal para escrever no ficheiro de log a entrada do carro
+                    try {
+                        semaphoreLogRecebeSinal.acquire(); //Espera que a thread escreva no ficheiro
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                //Thread tapete -> ativa e espera que o tapete inicie
-                sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.LIGAR_FRENTE);
-                semaphoreTapeteDaOrdem.release();
-                try {
-                    semaphoreTapeteRecebeOrdem.acquire(); //Verifica se o tapete já está a correr, pois ele tem delay para começar
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!reset) {
+                    //Thread tapete -> ativa e espera que o tapete inicie
+                    sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.LIGAR_FRENTE);
+                    semaphoreTapeteDaOrdem.release();
+                    try {
+                        semaphoreTapeteRecebeOrdem.acquire(); //Verifica se o tapete já está a correr, pois ele tem delay para começar
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                //Thread aspersores -> ativa e espera que acabe
-                sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.ASPIRAR);
-                semaphoreAspSecadorDaOrdem.release();
-                try {
-                    semaphoreAspSecadorRecebeSinal.acquire(); //Espera que os aspersores terminem
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!reset) {
+                    //Thread aspersores -> ativa e espera que acabe
+                    sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.ASPIRAR);
+                    semaphoreAspSecadorDaOrdem.release();
+                    try {
+                        semaphoreAspSecadorRecebeSinal.acquire(); //Espera que os aspersores terminem
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                //Thread rolos -> ativa e espera que acabe
-                sharedMainRolos.setPedidoMain(SharedMainRolos.PedidoMain.LIGAR);
-                semaphoreRolosDaOrdem.release();
-                try {
-                    semaphoreRolosRecebe.acquire(); //Entra quando os rolos acabarem
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!reset) {
+                    //Thread rolos -> ativa e espera que acabe
+                    sharedMainRolos.setPedidoMain(SharedMainRolos.PedidoMain.LIGAR);
+                    semaphoreRolosDaOrdem.release();
+                    try {
+                        semaphoreRolosRecebe.acquire(); //Entra quando os rolos acabarem
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                //Thread secadores -> ativa e espera acabar
-                sharedMainAspersoresSecadores.setDuracaoSecadores(randomNumber(tempoSecadorMin, tempoSecadorMax));
-                sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.SECAR);
-                semaphoreAspSecadorDaOrdem.release();
-                try {
-                    semaphoreAspSecadorRecebeSinal.acquire(); //Entra quando secadores acabarem
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!reset) {
+                    //Thread secadores -> ativa e espera acabar
+                    sharedMainAspersoresSecadores.setDuracaoSecadores(randomNumber(tempoSecadorMin, tempoSecadorMax));
+                    sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.SECAR);
+                    semaphoreAspSecadorDaOrdem.release();
+                    try {
+                        semaphoreAspSecadorRecebeSinal.acquire(); //Entra quando secadores acabarem
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                //Thread tapete -> finaliza operação
-                try {
-                    Thread.sleep(tempoFinalTapete * 1000L); //Espera 3 segundos antes de terminar tapete e finalizar lavagem
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.PARAR);
-                semaphoreTapeteDaOrdem.release();
+                if (!reset) {
+                    //Thread tapete -> finaliza operação
+                    try {
+                        Thread.sleep(tempoFinalTapete * 1000L); //Espera 3 segundos antes de terminar tapete e finalizar lavagem
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.PARAR);
+                    semaphoreTapeteDaOrdem.release();
 
-                //Thread log -> escreve fim de lavagem
-                sharedMainLog.setMessage(filaLavagem.dequeue().getNome() + " terminou lavagem");
-                semaphoreLogDaOrdem.release(); //Da ordem para escrever no ficheiro de log a saida do carro
-                try {
-                    semaphoreLogRecebeSinal.acquire(); //Espera que a thread escreva no ficheiro
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                    //Thread log -> escreve fim de lavagem
+                    sharedMainLog.setMessage(filaLavagem.dequeue().getNome() + " terminou lavagem");
+                    semaphoreLogDaOrdem.release(); //Da ordem para escrever no ficheiro de log a saida do carro
+                    try {
+                        semaphoreLogRecebeSinal.acquire(); //Espera que a thread escreva no ficheiro
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
-                if (estadoSistema != EstadoSistema.FECHADO) {
-                    estadoSistema = EstadoSistema.LIVRE;
+
+                    if (estadoSistema != EstadoSistema.FECHADO) {
+                        estadoSistema = EstadoSistema.LIVRE;
+                    }
+                    carrosLavados++;
+                    contadorSuspensoes = 0;
+                    System.out.println("Fila de espera para lavagem: " + filaLavagem.toString());
+                    System.out.println("Fila de espera para pagar: " + filaParaPagar.toString());
                 }
-                carrosLavados++;
-                contadorSuspensoes = 0;
-                System.out.println("Fila de espera para lavagem: " + filaLavagem.toString());
-                System.out.println("Fila de espera para pagar: " + filaParaPagar.toString());
+                reset=false;
             }
         }
     }

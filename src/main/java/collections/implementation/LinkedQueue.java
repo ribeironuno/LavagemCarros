@@ -88,4 +88,10 @@ public class LinkedQueue<T> implements QueueADT<T> {
         }
         return string;
     }
+
+    @Override
+    public void clear(){
+        this.front = this.rear = null;
+        this.size = 0;
+    }
 }

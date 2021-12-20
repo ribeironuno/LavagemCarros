@@ -1,6 +1,7 @@
 package lavagem;
 
 import enumerations.EstadoAspersoresSecadores;
+import enumerations.EstadoRolos;
 import sharedobjects.SharedMainAspersoresSecadores;
 
 import javax.imageio.ImageIO;
@@ -176,6 +177,11 @@ public class AspersoresSecadores implements Runnable {
                     this.estado = EstadoAspersoresSecadores.PARADO;
                     this.atualizarLabel();
                     semaphoreDaSinal.release();
+                    break;
+                case PARAR:
+                    this.estado = EstadoAspersoresSecadores.PARADO;
+                    System.out.println(Thread.currentThread().getName() + ": Aspersores e secadores pararam");
+                    this.atualizarLabel();
                     break;
             }
         }

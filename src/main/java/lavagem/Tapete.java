@@ -1,5 +1,6 @@
 package lavagem;
 
+import enumerations.EstadoRolos;
 import enumerations.EstadoTapete;
 import sharedobjects.SharedMainTapete;
 
@@ -107,10 +108,22 @@ public class Tapete implements Runnable {
 
             switch (sharedObj.getPedidoMain()) {
                 case LIGAR_FRENTE:
+                    long tempoInicio = System.currentTimeMillis(); //Regista a hora que iniciou caso seja interrompido saber o que falta de espera
                     try {
                         Thread.sleep(sharedObj.getDelayInicial() * 1000L); //Faz a espera inicial programada
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    } catch (InterruptedException ignored) {
+                        if (sharedObj.getPedidoMain() == SharedMainTapete.PedidoMain.SUSPENDER){
+                            long tempoRestante = (sharedObj.getDelayInicial() * 1000L) - (System.currentTimeMillis() - tempoInicio); //Obtem duracao que resta
+                            System.out.println(Thread.currentThread().getName() + ": Suspenso. Fica a faltar " + tempoRestante + "ms para esperar após retoma");
+                            try {
+                                semaphoreSuspender.acquire(); //Espera que a main liberte o recurso, ou seja, tire do botao de emergencia
+                                System.out.println(Thread.currentThread().getName() + ": Retomaram espera");
+                                this.atualizarLabel();
+                                Thread.sleep(tempoRestante);
+                            } catch (InterruptedException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
                     }
                     this.estado = EstadoTapete.MOV_FRENTE;
                     this.atualizarLabel();

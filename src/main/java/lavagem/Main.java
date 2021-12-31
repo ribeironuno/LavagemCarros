@@ -82,6 +82,7 @@ public class Main {
     private static SharedMainAspersoresSecadores sharedMainAspersoresSecadores;
 
     private static boolean reset;
+    private static boolean estavaEmLavagem = false;
 
     private static void lerDados(String caminho) throws IOException, ParseException {
         JSONParser parser = new JSONParser();
@@ -249,7 +250,7 @@ public class Main {
                             } else {
                                 sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.FECHO_SEM_DEVOLUCAO);
                             }
-                            filaParaPagar = new LinkedQueue<>(); //Limpa a queue
+                            filaParaPagar.clear();
                             estadoSistema = EstadoSistema.FECHADO;
                         } else {
                             estadoSistema = EstadoSistema.LIVRE;
@@ -260,35 +261,34 @@ public class Main {
                     case "E":
                         if (estadoSistema == EstadoSistema.SUSPENSO && contadorSuspensoes == 1) {
                             estadoSistema = EstadoSistema.LIVRE;
-                            semaphoreSuspender.release(3); //Avisa os thread que estao á espera do sinal do fim da suspensao
+                            if (estavaEmLavagem) {  //verifica se o botao suspenção foi ativado enquanto estava em lavagem
+                                semaphoreSuspender.release(2); //Avisa os thread que estao á espera do sinal do fim da suspensao
+                            } else {
+                                contadorSuspensoes = 0; //Caso a suspensao tenha occorido sem carros, ele podera zerar o estado
+                            }
                             sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.TIRAR_SUSPENCAO); //Avisa o moedeiro que o sistema esta suspenso
                             semaphoreMoedeiroDarOrdem.release();
-                            if (semaphoreLavagem.availablePermits() == 0) { //Caso a suspensao tenha occorido sem carros, ele podera zerar o estado
-                                contadorSuspensoes = 0;
-                            }
                         } else if (contadorSuspensoes == 0) {
-                            estadoSistema = EstadoSistema.SUSPENSO;
+                            if (estadoSistema == EstadoSistema.LIVRE) { //se nao estiver em lavagem
+                                estadoSistema = EstadoSistema.SUSPENSO;
+                            } else {
+                                estavaEmLavagem = true;
+                                estadoSistema = EstadoSistema.SUSPENSO;
 
-                            //Coloca os pedidos de SUSPENDER no shared object
-                            sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.SUSPENDER);
-                            sharedMainRolos.setPedidoMain(SharedMainRolos.PedidoMain.SUSPENDER);
-                            sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.SUSPENDER);
+                                //Coloca os pedidos de SUSPENDER no shared object
+                                sharedMainTapete.setPedidoMain(SharedMainTapete.PedidoMain.SUSPENDER);
+                                sharedMainRolos.setPedidoMain(SharedMainRolos.PedidoMain.SUSPENDER);
+                                sharedMainAspersoresSecadores.setPedidoMain(SharedMainAspersoresSecadores.PedidoMain.SUSPENDER);
 
-                            //Dá sinal para interromper, caso as thread estejam em sleep saibam
-                            threadTapete.interrupt();
-                            threadAspersoresSecadores.interrupt();
-                            threadRolos.interrupt();
-
+                                //Dá sinal para interromper, caso as thread estejam em sleep saibam
+                                threadTapete.interrupt();
+                                threadAspersoresSecadores.interrupt();
+                                threadRolos.interrupt();
+                            }
                             //Avisa o moedeiro que o sistema esta suspenso
                             sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.SUSPENDER);
                             semaphoreMoedeiroDarOrdem.release();
-
                             contadorSuspensoes++;
-                        }
-                        try {
-                            semaphoreSuspender.acquire(semaphoreSuspender.availablePermits());
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
                         }
                         break;
                     case "Ver logs":
@@ -348,6 +348,7 @@ public class Main {
                 if (estadoSistema != EstadoSistema.FECHADO) { //Caso o sistema estaja LIVRE muda para OCUPADO, caso esteja FECHADO continua
                     estadoSistema = EstadoSistema.OCUPADO;
                 }
+                estavaEmLavagem = true;
                 atualizarLabels();
 
                 if (!reset) {
@@ -431,10 +432,11 @@ public class Main {
                     }
                     carrosLavados++;
                     contadorSuspensoes = 0;
+                    estavaEmLavagem = false;
                     System.out.println("Fila de espera para lavagem: " + filaLavagem.toString());
                     System.out.println("Fila de espera para pagar: " + filaParaPagar.toString());
                 }
-                reset=false;
+                reset = false;
             }
         }
     }

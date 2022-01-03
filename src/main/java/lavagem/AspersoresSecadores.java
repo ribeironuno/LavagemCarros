@@ -134,8 +134,7 @@ public class AspersoresSecadores implements Runnable {
                                 this.estado = EstadoAspersoresSecadores.EM_ASPIRACAO;
                                 this.atualizarLabel();
                                 Thread.sleep(tempoRestante);
-                            } catch (InterruptedException ex) {
-                                ex.printStackTrace();
+                            } catch (InterruptedException ignored) {
                             }
                         }
                         this.estado = EstadoAspersoresSecadores.PARADO;

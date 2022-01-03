@@ -231,7 +231,9 @@ public class Main {
                         } else {
                             sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.RETIRADA_CARRO_COM_DEVOLUCAO); //Notifica que não é necessário devolver
                         }
-                        filaParaPagar.dequeue(); //Retira o carro da queue
+                        if (!filaParaPagar.isEmpty()) {
+                            filaParaPagar.dequeue(); //Retira o carro da queue
+                        }
                         semaphoreMoedeiroDarOrdem.release();
                         if (filaParaPagar.isEmpty() && estadoSistema != EstadoSistema.FECHADO) { //Caso o carro que cancelou foi o ultimo da fila
                             try {
@@ -321,10 +323,11 @@ public class Main {
                         carrosTotais = 0;
                         carrosLavados = 0;
                         filaParaPagar.clear();
-                        filaParaPagar.clear();
+                        filaLavagem.clear();
 
                         sharedMainInterface.darNotificacao(SharedMainInterface.Notificacao.SEM_CARROS);
                         semaphoreMoedeiroDarOrdem.release();
+                        contadorSuspensoes = 0;
                         reset = true;
                         break;
                 }

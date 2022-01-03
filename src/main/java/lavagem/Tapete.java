@@ -120,8 +120,7 @@ public class Tapete implements Runnable {
                                 System.out.println(Thread.currentThread().getName() + ": Retomaram espera");
                                 this.atualizarLabel();
                                 Thread.sleep(tempoRestante);
-                            } catch (InterruptedException ex) {
-                                ex.printStackTrace();
+                            } catch (InterruptedException ignore) {
                             }
                         }
                     }

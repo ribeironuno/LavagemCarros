@@ -129,8 +129,7 @@ public class Rolos implements Runnable {
                                 estado = EstadoRolos.ATIVO;
                                 this.atualizarLabel();
                                 Thread.sleep(tempoRestante);
-                            } catch (InterruptedException ex) {
-                                ex.printStackTrace();
+                            } catch (InterruptedException ignored) {
                             }
                         }
                     }

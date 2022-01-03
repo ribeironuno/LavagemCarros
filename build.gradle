@@ -25,5 +25,5 @@ test {
 }
 
 application {
-    mainClass = 'java.lavagem.Main'
+    mainClass = 'lavagem.Main'
 }
